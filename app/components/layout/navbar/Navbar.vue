@@ -48,7 +48,7 @@ const auth = useAuth()
               </NuxtLink>
             </UiDropdownMenuItem>
             <UiDropdownMenuItem asChild>
-              <NuxtLink to="/settings" class="block w-full px-4 py-2 hover:bg-accent-foreground/10 rounded">
+              <NuxtLink to="/me/settings" class="block w-full px-4 py-2 hover:bg-accent-foreground/10 rounded">
                 Настройки
               </NuxtLink>
             </UiDropdownMenuItem>

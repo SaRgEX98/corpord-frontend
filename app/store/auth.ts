@@ -35,7 +35,7 @@ export const useAuthStore = defineStore('auth', {
 
         async loginWithYandex() {
             const config = useRuntimeConfig()
-            window.location.href = `${config.public.apiBase}/auth/google`
+            window.location.href = `${config.public.apiBase}/auth/yandex`
         },
 
         async refresh() {

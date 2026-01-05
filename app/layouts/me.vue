@@ -2,6 +2,11 @@
 import {useAuth} from '~/composables/useAuth'
 import {useRoute} from 'vue-router'
 
+definePageMeta({
+  public: false,
+  middleware: 'guest'
+})
+
 const auth = useAuth()
 const route = useRoute()
 
@@ -18,34 +23,36 @@ const exit = async () => {
 </script>
 
 <template>
-  <div class="flex h-screen bg-background text-foreground">
+  <div class="relative h-screen bg-background text-foreground">
     <LayoutNavbar/>
     <!-- Sidebar -->
-    <aside class="w-64 border-r border-border p-6 flex flex-col">
-      <div class="mb-8">
-        <p class="font-bold text-lg">Личный кабинет</p>
-      </div>
-      <nav class="flex flex-col gap-2">
-        <NuxtLink
-            v-for="item in menuItems"
-            :key="item.path"
-            :to="item.path"
-            class="px-4 py-2 rounded hover:bg-accent-foreground/10 transition"
-            :class="route.path === item.path ? 'bg-accent-foreground/20 font-semibold' : ''"
-        >
-          {{ item.name }}
-        </NuxtLink>
-      </nav>
-      <div class="mt-auto">
-        <UiButton variant="outline" @click="exit" class="w-full px-4 py-2 rounded hover:bg-destructive/90 transition">
-          Выйти
-        </UiButton>
-      </div>
-    </aside>
+    <div class="flex flex-row h-full">
+      <aside class="w-64 border-r border-border p-6 flex flex-col">
+        <div class="mb-8">
+          <p class="font-bold text-lg">Личный кабинет</p>
+        </div>
+        <nav class="flex flex-col gap-2">
+          <NuxtLink
+              v-for="item in menuItems"
+              :key="item.path"
+              :to="item.path"
+              class="px-4 py-2 rounded hover:bg-accent-foreground/10 transition"
+              :class="route.path === item.path ? 'bg-accent-foreground/20 font-semibold' : ''"
+          >
+            {{ item.name }}
+          </NuxtLink>
+        </nav>
+        <div class="mt-auto">
+          <UiButton variant="outline" @click="exit" class="w-full px-4 py-2 rounded hover:bg-destructive/90 transition">
+            Выйти
+          </UiButton>
+        </div>
+      </aside>
 
-    <!-- Main content -->
-    <main class="flex-1 p-6 overflow-auto">
-      <slot/>
-    </main>
+      <!-- Main content -->
+      <main class="flex-1 p-6 overflow-auto">
+        <slot/>
+      </main>
+    </div>
   </div>
 </template>

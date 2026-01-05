@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
-import Input from '~/components/ui/input/Input.vue'
-import { UiButton } from '~/components/ui/button'
-import { UiSelect } from '~/components/ui/select'
-import { UiDatePicker } from '~/components/ui/date-picker'
-import { UiTimePicker } from '~/components/ui/time-picker'
+import { CalendarIcon, MapPinIcon, UsersIcon, BusIcon } from 'lucide-vue-next'
+import { getLocalTimeZone, today } from '@internationalized/date'
+import { cn } from '~/lib/utils'
+import {OrderSchema} from "~/features/order/ui/order.schema";
 
 interface Address {
   id: number
@@ -17,15 +16,26 @@ const addresses = ref<Address[]>([
 ])
 const nextId = ref(3)
 
-const date = ref<Date | null>(null)
+const start = today(getLocalTimeZone())
+const end = start.add({ days: 7 })
+const dateRange = ref({ start, end })
+
 const time = ref<string>('09:00')
 const passengers = ref(1)
 const busType = ref('standard')
+const busTypes = [
+  { label: 'Микроавтобус', value: 'minibus' },
+  { label: 'Стандарт', value: 'standard' },
+  { label: 'VIP', value: 'vip' },
+]
+
 const options = reactive({
   wifi: true,
   ac: true,
   seatbelts: true,
 })
+
+const isFormValid = OrderSchema
 
 function addAddress() {
   addresses.value.push({ id: nextId.value++, value: '' })
@@ -36,30 +46,36 @@ function removeAddress(id: number) {
 }
 
 function searchRoutes() {
-  // Здесь будет вызов API с адресами, датой, временем, пассажирами и типом автобуса
+  if (!isFormValid['~validate']) return
   console.log({
-    addresses: addresses.value,
-    date: date.value,
+    addresses: addresses.value.map(a => a.value),
+    date: dateRange.value,
     time: time.value,
     passengers: passengers.value,
     busType: busType.value,
     options: { ...options },
   })
+  // TODO: вызвать API для поиска маршрутов
 }
 </script>
 
 <template>
   <div class="grid grid-cols-1 md:grid-cols-[1fr_1fr] gap-8 items-center w-full px-6 py-16 bg-sky/10">
-    <!-- Форма маршрутов -->
+    <!-- Левая часть: форма маршрутов -->
     <div class="flex flex-col gap-4 bg-background/70 p-6 rounded-xl shadow-md">
       <h1 class="text-3xl font-bold text-foreground mb-4">Найдите маршрут</h1>
 
       <!-- Адреса -->
       <div class="flex flex-col gap-2">
-        <div v-for="(address, index) in addresses" :key="address.id" class="flex items-center gap-2">
-          <Input
+        <div
+            v-for="(address, index) in addresses"
+            :key="address.id"
+            class="flex items-center gap-2 relative"
+        >
+          <UiInput
               v-model="address.value"
               :placeholder="index === 0 ? 'Откуда' : index === 1 ? 'Куда' : 'Промежуточная точка'"
+              icon="MapPinIcon"
           />
           <UiButton
               v-if="index > 1"
@@ -73,42 +89,69 @@ function searchRoutes() {
         <UiButton variant="outline" size="sm" @click="addAddress">+ Добавить адрес</UiButton>
       </div>
 
-      <!-- Дата и время -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-4">
-        <UiDatePicker v-model="date" placeholder="Выберите дату" />
-        <UiTimePicker v-model="time" placeholder="Выберите время" />
-      </div>
+      <!-- Дата поездки -->
+      <UiPopover>
+        <UiPopoverTrigger as-child>
+          <UiButton
+              variant="outline"
+              :class="cn('w-full justify-start text-left font-normal', !dateRange.start && 'text-muted-foreground')"
+          >
+            <CalendarIcon class="mr-2 h-4 w-4"/>
+            <div class="flex flex-row justify-between items-center w-1/3">
+              <span>{{ dateRange.start }}</span>
+              <span>-</span>
+              <span>{{ dateRange.end }}</span>
+            </div>
+          </UiButton>
+        </UiPopoverTrigger>
+        <UiPopoverContent class="w-auto p-0">
+          <UiRangeCalendar v-model="dateRange" :number-of-months="2" disable-days-outside-current-view/>
+        </UiPopoverContent>
+      </UiPopover>
 
-      <!-- Пассажиры и тип автобуса -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-4">
-        <Input type="number" v-model="passengers" min="1" placeholder="Количество пассажиров" />
-        <UiSelect v-model="busType" placeholder="Тип автобуса">
-          <option value="minibus">Микроавтобус</option>
-          <option value="standard">Стандарт</option>
-          <option value="vip">VIP</option>
+      <!-- Время, пассажиры, тип автобуса -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mt-4">
+        <UiInput type="time" v-model="time" icon="ClockIcon" />
+        <UiInput type="number" v-model="passengers" min="1" placeholder="Пассажиры" icon="UsersIcon" />
+        <UiSelect v-model="busType">
+          <UiSelectTrigger>
+            <UiSelectValue placeholder="Тип автобуса"/>
+          </UiSelectTrigger>
+          <UiSelectContent>
+            <UiSelectItem v-for="item in busTypes" :key="item.value" :value="item.value">
+              {{ item.label }}
+            </UiSelectItem>
+          </UiSelectContent>
         </UiSelect>
       </div>
 
       <!-- Дополнительные опции -->
-      <div class="flex flex-row gap-4 mt-4">
-        <label class="flex items-center gap-1">
-          <input type="checkbox" v-model="options.wifi" />
+      <div class="flex flex-row flex-wrap gap-4 mt-4">
+        <UiLabel class="flex items-center gap-1">
+          <UiCheckbox v-model="options.wifi"/>
           Wi-Fi
-        </label>
-        <label class="flex items-center gap-1">
-          <input type="checkbox" v-model="options.ac" />
+        </UiLabel>
+        <UiLabel class="flex items-center gap-1">
+          <UiCheckbox v-model="options.ac"/>
           Кондиционер
-        </label>
-        <label class="flex items-center gap-1">
-          <input type="checkbox" v-model="options.seatbelts" />
+        </UiLabel>
+        <UiLabel class="flex items-center gap-1">
+          <UiCheckbox v-model="options.seatbelts"/>
           Ремни безопасности
-        </label>
+        </UiLabel>
       </div>
 
-      <UiButton class="mt-4 w-full" @click="searchRoutes">Найти маршруты</UiButton>
+      <!-- Кнопка поиска -->
+      <UiButton
+          class="mt-4 w-full"
+          @click="searchRoutes"
+          :disabled="!isFormValid"
+      >
+        Найти маршруты
+      </UiButton>
     </div>
 
-    <!-- Иллюстрация / картинка справа -->
+    <!-- Правая часть: иллюстрация -->
     <div class="flex justify-center items-center">
       <NuxtImg class="h-[60vh] mix-blend-difference" src="/light.png" alt="Маршрут" />
     </div>
