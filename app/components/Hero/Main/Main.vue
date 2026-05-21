@@ -60,6 +60,7 @@ function searchRoutes() {
 </script>
 
 <template>
+  <div={]>
   <div class="grid grid-cols-1 md:grid-cols-[1fr_1fr] gap-8 items-center w-full px-6 py-16 bg-sky/10">
     <!-- Левая часть: форма маршрутов -->
     <div class="flex flex-col gap-4 bg-background/70 p-6 rounded-xl shadow-md">
