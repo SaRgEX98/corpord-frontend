@@ -1,11 +1,11 @@
-let state: Record<string, any> = {}
+import { grafanaState } from '#server/utils/grafanaState'
 
-export const getState = () => state
+export const getState = () => grafanaState
 
 export const updateState = (instance: string, data: any) => {
-    state[instance] = data
+    grafanaState[instance] = data
 }
 
 export default defineEventHandler(() => {
-    return Object.values(state)
+    return Object.values(grafanaState)
 })
