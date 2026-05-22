@@ -1,0 +1,1 @@
+export const grafanaState: Record<string, any> = {}
