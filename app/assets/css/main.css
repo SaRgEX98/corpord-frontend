@@ -2,10 +2,10 @@
 @import "tw-animate-css";
 @custom-variant dark (&:is(.dark *));
 @theme inline {
- --color-background: var(--background); --color-foreground: var(--foreground); --color-card: var(--card); --color-card-foreground: var(--foreground); --color-popover: var(--card); --color-popover-foreground: var(--foreground); --color-primary: var(--primary); --color-primary-foreground: #fff; --color-secondary: var(--muted); --color-secondary-foreground: var(--foreground); --color-muted: var(--muted); --color-muted-foreground: var(--muted-foreground); --color-accent: var(--muted); --color-accent-foreground: var(--foreground); --color-destructive: #d84949; --color-border: var(--border); --color-input: var(--border); --color-ring: var(--primary); --radius-sm: .5rem; --radius-md: .75rem; --radius-lg: 1rem; --radius-xl: 1.5rem;
+ --color-background: var(--background); --color-foreground: var(--foreground); --color-card: var(--card); --color-card-foreground: var(--foreground); --color-popover: var(--card); --color-popover-foreground: var(--foreground); --color-primary: var(--primary); --color-primary-foreground: var(--primary-foreground); --color-secondary: var(--muted); --color-secondary-foreground: var(--foreground); --color-muted: var(--muted); --color-muted-foreground: var(--muted-foreground); --color-accent: var(--muted); --color-accent-foreground: var(--foreground); --color-destructive: var(--destructive); --color-destructive-foreground: var(--destructive-foreground); --color-border: var(--border); --color-input: var(--border); --color-ring: var(--primary); --radius-sm: .5rem; --radius-md: .75rem; --radius-lg: 1rem; --radius-xl: 1.5rem;
 }
-:root { color-scheme:light; --background:#f5f6f8; --foreground:#172538; --card:#fff; --muted:#edf1f6; --muted-foreground:#637185; --primary:#245ce3; --border:#e1e6ed; --navy:#101f35; --radius:1rem; }
-.dark { color-scheme:dark; --background:#0e1724; --foreground:#e9eff8; --card:#172436; --muted:#213047; --muted-foreground:#a6b4c8; --primary:#6d9aff; --border:#2c3c52; --navy:#091321; }
+:root { color-scheme:light; --background:#f5f6f8; --foreground:#172538; --card:#fff; --muted:#edf1f6; --muted-foreground:#637185; --primary:#245ce3; --primary-foreground:#fff; --destructive:#b83232; --destructive-foreground:#fff; --border:#e1e6ed; --navy:#101f35; --radius:1rem; }
+.dark { color-scheme:dark; --background:#0e1724; --foreground:#e9eff8; --card:#172436; --muted:#213047; --muted-foreground:#a6b4c8; --primary:#6d9aff; --primary-foreground:#07172f; --destructive:#ff9696; --destructive-foreground:#360f15; --border:#2c3c52; --navy:#091321; }
 @layer base { * { border-color:var(--border); } body { margin:0; background:var(--background); color:var(--foreground); font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; -webkit-font-smoothing:antialiased; } button,input,select,textarea { font:inherit; } button,a,input,select,textarea { -webkit-tap-highlight-color:transparent; } button { cursor:pointer; } button:disabled { cursor:wait; opacity:.6; } a { text-decoration:none; } :focus-visible { outline:3px solid var(--primary); outline-offset:4px; } h1,h2,h3,p { margin:0; } h1,h2,h3 { letter-spacing:-.035em; } }
 .container-page { width:min(1240px,100%); margin:0 auto; padding:40px 40px 64px; }
 .page-eyebrow { color:var(--primary); font-size:11px; text-transform:uppercase; letter-spacing:.15em; font-weight:800; margin-bottom:10px; }
@@ -15,11 +15,11 @@
 .panel { background:var(--card); border:1px solid var(--border); border-radius:16px; }
 .btn { display:inline-flex; justify-content:center; align-items:center; gap:8px; border-radius:10px; padding:11px 17px; font-size:13px; font-weight:650; line-height:1.4; border:1px solid transparent; transition:background .15s,transform .15s; white-space:nowrap; }
 .btn:hover { transform:translateY(-1px); }
-.btn-primary { background:var(--primary); color:#fff; }
-.dark .btn-primary { color:#07172f; }
+.btn-primary { background:var(--primary); color:var(--primary-foreground); }
+
 .btn-secondary { border-color:var(--border); background:var(--card); color:var(--foreground); }
 .btn-quiet { background:var(--muted); color:var(--foreground); }
-.btn-danger { background:#cf3838; color:white; }
+.btn-danger { background:var(--destructive); color:var(--destructive-foreground); }
 .input { width:100%; min-height:44px; border:1px solid var(--border); background:var(--card); color:var(--foreground); border-radius:9px; padding:10px 13px; font-size:14px; }
 .input::placeholder { color:var(--muted-foreground); opacity:.8; }
 .field { display:flex; flex-direction:column; gap:8px; font-size:12px; font-weight:650; }
