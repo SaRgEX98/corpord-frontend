@@ -1,1 +1,4 @@
-<script setup lang="ts">useHead({ title: 'Рейсы и маршруты' })</script><template><TransportTripCatalog/></template>
+<script setup lang="ts">
+useHead({ title: "Рейсы и маршруты" });
+</script>
+<template><TransportTripCatalog /></template>
