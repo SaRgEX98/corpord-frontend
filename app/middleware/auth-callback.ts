@@ -6,7 +6,7 @@ export default defineNuxtRouteMiddleware(async () => {
         // The backend callback stores only the HttpOnly refresh cookie.
         await auth.refresh()
     } catch {
-        auth.$reset()
+        auth.clearSession()
         return navigateTo('/login')
     }
     return navigateTo('/me/profile')

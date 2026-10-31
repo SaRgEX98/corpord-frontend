@@ -12,7 +12,7 @@ export interface User {
 export interface UserInput {
     email: string
     name: string
-    password?: string
+    password: string
 }
 export interface UserUpdate {
     email?: string
