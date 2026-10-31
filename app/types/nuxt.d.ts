@@ -4,6 +4,7 @@ declare module '#app' {
     interface NuxtApp {
         $api: $Fetch
         $refreshSession: () => Promise<void>
+        $getSessionVersion: () => number
         $runSessionTransition: <T>(operation: () => Promise<T>) => Promise<T>
     }
 }
@@ -12,6 +13,7 @@ declare module 'vue' {
     interface ComponentCustomProperties {
         $api: $Fetch
         $refreshSession: () => Promise<void>
+        $getSessionVersion: () => number
         $runSessionTransition: <T>(operation: () => Promise<T>) => Promise<T>
     }
 }

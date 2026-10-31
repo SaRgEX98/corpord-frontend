@@ -14,7 +14,7 @@ const profile = { id: 1, email: 'test@example.invalid', name: 'Тест', role: 
 function setup(api, refresh) {
     setActivePinia(createPinia())
     const auth = useAuthStore()
-    globalThis.useNuxtApp = () => ({ $api: api, $runSessionTransition: operation => operation(), $refreshSession: async () => {
+    globalThis.useNuxtApp = () => ({ $api: api, $getSessionVersion: () => auth.sessionVersion, $runSessionTransition: operation => operation(), $refreshSession: async () => {
         await refresh?.()
         auth.token = 'access-token'
     } })

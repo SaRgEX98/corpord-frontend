@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { createFetch } from 'ofetch'
+import { createAuthApi } from '../app/api/auth.api.ts'
 import { createSessionClient } from '../app/api/session-client.ts'
 
 function setup(handler) {
@@ -214,5 +215,22 @@ test('identity changed by another refresh waiter cannot inherit an in-flight mut
     await assert.rejects(mutation)
     assert.equal(client.calls.length, 2)
     assert.equal(client.token(), 'user-b')
+    assert.equal(client.clears(), 0)
+})
+
+test('logout-all preflight started as A never revokes a new B identity', async () => {
+    let releaseProfile
+    const client = setup(call => {
+        if (call.path.endsWith('/users/me')) return new Promise(resolve => { releaseProfile = () => resolve(json({ id: 1 })) })
+        return json({ message: 'must never revoke B' })
+    })
+    const auth = createAuthApi(client.api, client.refreshSession, client.runSessionTransition, client.getSessionVersion)
+    const logout = auth.logoutAll()
+    await new Promise(resolve => setImmediate(resolve))
+    client.replace('user-b')
+    releaseProfile()
+    await assert.rejects(logout, /Сессия изменилась/)
+    assert.equal(client.token(), 'user-b')
+    assert.equal(client.calls.length, 1)
     assert.equal(client.clears(), 0)
 })
