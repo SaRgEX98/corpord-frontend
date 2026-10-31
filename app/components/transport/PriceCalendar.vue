@@ -26,12 +26,12 @@ watch(() => props.modelValue, value => { if (value) placeholder.value = parseDat
       <CalendarGrid v-for="month in grid" :key="month.value.toString()" class="w-full mt-3">
         <CalendarGridHead><CalendarGridRow class="grid grid-cols-7"><CalendarHeadCell v-for="day in weekDays" :key="day" class="w-auto">{{ day }}</CalendarHeadCell></CalendarGridRow></CalendarGridHead>
         <CalendarGridBody><CalendarGridRow v-for="(week,index) in month.rows" :key="index" class="grid grid-cols-7 mt-1"><CalendarCell v-for="date in week" :key="date.toString()" :date="date">
-          <CalendarCellTrigger :day="date" :month="month.value" :aria-label="`${date.toString()}: ${pending ? 'Загрузка' : error ? 'Цена недоступна' : label(date.toString())}`" class="h-16 w-full flex-col gap-1 text-sm data-[outside-view]:opacity-30">
-            <span>{{ date.day }}</span><small class="block text-[9px] sm:text-xs">{{ pending ? '…' : error ? '—' : label(date.toString()) }}</small>
+          <CalendarCellTrigger :day="date" :month="month.value" :aria-label="`${date.toString()}: ${pending ? 'Загрузка' : error ? 'Цена недоступна' : label(date.toString())}`" class="h-16 w-full min-w-0 flex-col gap-1 overflow-hidden text-sm data-[outside-view]:opacity-30 data-[unavailable]:no-underline">
+            <span>{{ date.day }}</span><small v-if="date.month === month.value.month" class="block w-full overflow-hidden text-ellipsis whitespace-nowrap text-[9px] leading-tight" :title="label(date.toString())">{{ pending ? '…' : error ? '—' : dayMap.get(date.toString())?.status === 'no_trips' ? '—' : dayMap.get(date.toString())?.min_price_minor != null ? minorPrice(dayMap.get(date.toString())!.min_price_minor!) : '?' }}</small>
           </CalendarCellTrigger>
         </CalendarCell></CalendarGridRow></CalendarGridBody>
       </CalendarGrid>
     </CalendarRoot>
-    <p class="mt-3 text-xs text-muted-foreground">«Нет рейсов» — день недоступен. Наличие расписания не гарантирует свободные места; доступность уточняется.</p>
+    <p class="mt-3 text-xs text-muted-foreground">«—» — нет рейсов, день недоступен; «?» — цена уточняется. Наличие расписания не гарантирует свободные места; доступность уточняется.</p>
   </section>
 </template>

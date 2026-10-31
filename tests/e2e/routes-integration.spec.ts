@@ -87,6 +87,13 @@ test('segment price agrees across search, Russian calendar and detail in another
     await expect(page.getByRole('article')).toHaveCount(1);
     await expect(page.getByRole('article')).toContainText(/300,03/);
     await page.screenshot({path: 'test-results/route-calendar-desktop.png', fullPage: true});
+    await page.evaluate(() => document.documentElement.classList.add('dark'));
+    await page.screenshot({path: 'test-results/route-calendar-dark.png', fullPage: true});
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({path: 'test-results/route-calendar-mobile.png', fullPage: true});
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.evaluate(() => document.documentElement.classList.remove('dark'));
     // The named section is also accessible by its stable aria-label across browser engines.
     await expect(page.locator('[aria-label="Календарь цен"]')).toContainText(/пн/i);
     await expect(page.locator(`[aria-label^="${date}:"]`)).toContainText(/300,03/);
