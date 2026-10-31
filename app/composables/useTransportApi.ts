@@ -1,5 +1,5 @@
-import { createTransportApi } from '~/api/transport.api'
+import { createTransportApi } from "~/api/transport.api";
 
 export function useTransportApi() {
-    return createTransportApi(useNuxtApp().$api)
+  return createTransportApi(useNuxtApp().$api);
 }

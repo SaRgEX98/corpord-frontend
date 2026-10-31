@@ -4,9 +4,14 @@ const props = defineProps<{
   error: { statusCode?: number; message?: string };
 }>();
 const missing = computed(() => props.error.statusCode === 404);
+const forbidden = computed(() => props.error.statusCode === 403);
 useHead({
   title: computed(() =>
-    missing.value ? "Страница не найдена · Corpord" : "Ошибка · Corpord",
+    missing.value
+      ? "Страница не найдена"
+      : forbidden.value
+        ? "Доступ ограничен"
+        : "Ошибка",
   ),
 });
 </script>
@@ -19,14 +24,18 @@ useHead({
         {{
           missing
             ? "Кажется, мы свернули не туда."
-            : "На маршруте небольшая задержка."
+            : forbidden
+              ? "Доступ ограничен"
+              : "На маршруте небольшая задержка."
         }}
       </h1>
       <p>
         {{
           missing
             ? "Этой страницы нет. Вернёмся к расписанию и выберем новый маршрут."
-            : "Не удалось открыть страницу. Попробуйте вернуться к расписанию."
+            : forbidden
+              ? "Этот раздел доступен только администратору."
+              : "Не удалось открыть страницу. Попробуйте вернуться к расписанию."
         }}
       </p>
       <button

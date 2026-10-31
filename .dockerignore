@@ -8,3 +8,6 @@ docker-compose.yml
 npm-debug.log
 .env*
 **/.env*
+
+test-results
+playwright-report

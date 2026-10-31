@@ -1,4 +1,4 @@
-// server/api/grafana/stream.ts
+import { grafanaState } from '#server/utils/grafanaState'
 
 export default defineEventHandler((event) => {
     setHeader(event, 'Content-Type', 'text/event-stream')
@@ -7,7 +7,7 @@ export default defineEventHandler((event) => {
 
     const send = () => {
         event.node.res.write(
-            `data: ${JSON.stringify(Object.values(state))}\n\n`
+            `data: ${JSON.stringify(Object.values(grafanaState))}\n\n`
         )
     }
 
