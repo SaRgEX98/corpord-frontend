@@ -70,8 +70,7 @@ const statuses = computed(() => [
 const categories = computed(() => [
   ...new Set(
     records.value
-      .filter((r): r is Bus => "brand" in r)
-      .map((r) => r.category)
+      .flatMap((r) => ("brand" in r ? [r.category] : []))
       .filter(Boolean),
   ),
 ]);

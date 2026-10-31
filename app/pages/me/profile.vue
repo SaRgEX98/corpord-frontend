@@ -13,7 +13,11 @@ definePageMeta({ layout: "me" });
 useHead({ title: "Личный кабинет" });
 const auth = useAuthStore();
 const role = computed(() =>
-  auth.user?.role === "admin" ? "Администратор" : "Пользователь",
+  auth.user?.role === "admin"
+    ? "Администратор"
+    : auth.user?.role === "moderator"
+      ? "Модератор"
+      : "Пользователь",
 );
 </script>
 <template>

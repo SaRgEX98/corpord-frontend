@@ -19,7 +19,7 @@ useHead({
   left: 20px;
   z-index: 100;
   background: var(--primary);
-  color: white;
+  color: var(--primary-foreground);
   padding: 12px;
   border-radius: 8px;
 }

@@ -3,6 +3,8 @@ name: Build and Push Frontend
 on:
   push:
     branches: ["main", "dev"]
+  pull_request:
+    branches: ["dev", "main"]
   workflow_dispatch:
 
 concurrency:
@@ -32,12 +34,18 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Typecheck
+        run: npm run typecheck
+
       - name: Run tests
         run: npm test
 
+      - name: Production build
+        run: npm run build
+
   build:
     needs: test
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
     runs-on: ubuntu-latest
 
     permissions:
