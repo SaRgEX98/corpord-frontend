@@ -1,12 +1,13 @@
 <script setup lang="ts">
-definePageMeta({
-  layout: 'me',
-})
-</script>
-
-<template>
-  <div class="space-y-4">
-    <h1 class="text-2xl font-bold">Настройки</h1>
-    <p>Тут будут настройки пользователя</p>
-  </div>
-</template>
+import { ArrowLeft, Palette, ShieldCheck, LogOut } from 'lucide-vue-next'
+import { useAuthStore } from '~/store/auth'
+import { apiErrorMessage } from '~/utils/api-errors'
+definePageMeta({ layout: 'me' })
+useHead({ title: 'Настройки' })
+const auth = useAuthStore()
+const dialog = ref<HTMLDialogElement | null>(null)
+const loading = ref(false)
+const error = ref('')
+function confirmRevoke() { error.value = ''; dialog.value?.showModal() }
+async function revokeAll() { if (loading.value) return; loading.value = true; error.value = ''; try { await auth.logoutAll(); dialog.value?.close(); await navigateTo('/login') } catch (cause) { error.value = apiErrorMessage(cause) } finally { loading.value = false } }
+</script><template><div class="container-page"><NuxtLink to="/me/profile" class="back-link"><ArrowLeft :size="15"/>Личный кабинет</NuxtLink><div class="page-heading"><div><p class="page-eyebrow">ПОД ВАШ РИТМ</p><h1 class="page-title">Настройки</h1><p class="page-description">Внешний вид приложения и безопасность вашего аккаунта.</p></div></div><div class="settings-stack"><section class="panel card-pad"><div class="settings-heading"><Palette :size="21"/><div><h2 class="section-label">Оформление</h2><p>Выберите тему или используйте настройки вашего устройства.</p></div></div><ThemePicker/><p class="settings-note">Предпочтение сохраняется в этом браузере.</p></section><section class="panel card-pad"><div class="settings-heading"><ShieldCheck :size="21"/><div><h2 class="section-label">Безопасность</h2><p>Завершите сеансы на всех устройствах, включая текущее.</p></div></div><button class="btn btn-secondary" @click="confirmRevoke"><LogOut :size="15"/>Выйти на всех устройствах</button><p class="settings-note">Для продолжения работы потребуется войти снова.</p></section></div><dialog ref="dialog" class="revoke-dialog" aria-labelledby="revoke-title" @cancel="loading && $event.preventDefault()"><h2 id="revoke-title">Завершить все сеансы?</h2><p>Вы выйдете из аккаунта на всех устройствах, включая это. После этого можно будет войти снова.</p><div v-if="error" class="form-error" role="alert">{{ error }}</div><div class="dialog-actions"><button class="btn btn-secondary" :disabled="loading" autofocus @click="dialog?.close()">Отмена</button><button class="btn btn-danger" :disabled="loading" :aria-busy="loading" @click="revokeAll">{{ loading ? 'Завершаем…' : 'Завершить сеансы' }}</button></div></dialog></div></template><style scoped>.settings-stack{max-width:800px;display:flex;flex-direction:column;gap:22px}.settings-heading{display:flex;gap:14px;align-items:flex-start;margin-bottom:26px}.settings-heading>svg{color:var(--primary);margin-top:1px;flex-shrink:0}.settings-heading p{font-size:12px;line-height:1.8;color:var(--muted-foreground);margin-top:8px}.settings-note{font-size:10px;color:var(--muted-foreground);margin-top:14px;line-height:1.7}.revoke-dialog{border:1px solid var(--border);border-radius:17px;padding:28px;max-width:450px;width:calc(100% - 36px);background:var(--card);color:var(--foreground);box-shadow:0 25px 100px #0003}.revoke-dialog::backdrop{background:#07142699;backdrop-filter:blur(3px)}.revoke-dialog h2{font-size:22px;font-weight:700}.revoke-dialog>p{font-size:12px;color:var(--muted-foreground);line-height:1.8;margin:15px 0 24px}.dialog-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}@media(max-width:420px){.dialog-actions{flex-direction:column-reverse}.dialog-actions .btn{width:100%}}</style>
