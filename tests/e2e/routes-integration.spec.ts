@@ -86,6 +86,7 @@ test('segment price agrees across search, Russian calendar and detail in another
     await page.goto(`/trips?${params}&from_name=${encodeURIComponent(`Старт ${suffix}`)}&to_name=${encodeURIComponent(`Финиш ${suffix}`)}`);
     await expect(page.getByRole('article')).toHaveCount(1);
     await expect(page.getByRole('article')).toContainText(/300,03/);
+    await page.screenshot({path: 'test-results/route-calendar-desktop.png', fullPage: true});
     // The named section is also accessible by its stable aria-label across browser engines.
     await expect(page.locator('[aria-label="Календарь цен"]')).toContainText(/пн/i);
     await expect(page.locator(`[aria-label^="${date}:"]`)).toContainText(/300,03/);
@@ -94,6 +95,7 @@ test('segment price agrees across search, Russian calendar and detail in another
     await expect(page.locator('main')).toContainText(/300,03/);
     await expect(page.locator('main')).toContainText('Свободные места уточняются');
     await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({path: 'test-results/route-detail-mobile.png', fullPage: true});
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
     expect(errors).toEqual([]); expect(prohibited).toEqual([]);
   } finally {
