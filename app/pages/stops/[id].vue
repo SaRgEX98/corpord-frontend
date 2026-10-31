@@ -1,0 +1,1 @@
+<template><TransportResourceDetail kind="stops"/></template>

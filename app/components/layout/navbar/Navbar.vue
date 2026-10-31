@@ -1,70 +1,10 @@
 <script setup lang="ts">
-definePageMeta({
-  public: true,
-})
-
-import { useAuth } from '~/composables/useAuth'
-
-const auth = useAuth()
+import { Menu, X, ArrowUpRight, UserRound } from 'lucide-vue-next'
+import { useAuthStore } from '~/store/auth'
+const auth = useAuthStore()
+const route = useRoute()
+const open = ref(false)
+watch(() => route.path, () => { open.value = false })
 </script>
-
-<template>
-  <nav class="bg-background/80 backdrop-blur-md sticky top-0 w-full z-50 shadow-md">
-    <div class="max-w-[80dvw] mx-auto px-6 py-3 flex items-center justify-between">
-      <NuxtLink to="/" class="flex items-center gap-2">
-        <NuxtImg src="/svg/logo.svg" alt="logo" width="48" height="48" />
-        <span class="font-bold text-xl text-foreground">Corpord</span>
-      </NuxtLink>
-
-      <!-- Навигация десктоп -->
-      <div class="hidden md:flex gap-8 font-medium items-center text-foreground">
-        <NuxtLink to="#about" class="hover:text-accent-foreground transition">О нас</NuxtLink>
-        <NuxtLink to="#buses" class="hover:text-accent-foreground transition">Автобусы</NuxtLink>
-        <NuxtLink to="#routes" class="hover:text-accent-foreground transition">Маршруты</NuxtLink>
-        <NuxtLink to="#orders" class="hover:text-accent-foreground transition">Заказы</NuxtLink>
-      </div>
-
-      <!-- Кнопки / профиль -->
-      <div class="hidden md:flex items-center gap-4">
-        <!-- Кнопка Войти -->
-        <NuxtLink v-if="!auth.isAuthenticated.value" to="/login">
-          <UiButton variant="default">Войти</UiButton>
-        </NuxtLink>
-
-        <!-- Avatar + Dropdown для авторизованного пользователя -->
-        <UiDropdownMenu v-else>
-          <UiDropdownMenuTrigger asChild>
-            <UiButton class="flex items-center">
-              <UiAvatar>
-                <AvatarImage :src="auth.user.value?.avatar_url || '/svg/logo.svg'" />
-                <AvatarFallback class="w-full h-full text-center text-2xl">{{ auth.user.value?.name?.[0]?.toUpperCase() || 'U' }}</AvatarFallback>
-              </UiAvatar>
-            </UiButton>
-          </UiDropdownMenuTrigger>
-          <UiDropdownMenuContent align="end" class="bg-background text-foreground shadow-lg rounded-lg min-w-[160px]">
-            <UiDropdownMenuItem asChild>
-              <NuxtLink to="/me/profile" class="block w-full px-4 py-2 hover:bg-accent-foreground/10 rounded">
-                Профиль
-              </NuxtLink>
-            </UiDropdownMenuItem>
-            <UiDropdownMenuItem asChild>
-              <NuxtLink to="/me/settings" class="block w-full px-4 py-2 hover:bg-accent-foreground/10 rounded">
-                Настройки
-              </NuxtLink>
-            </UiDropdownMenuItem>
-            <UiDropdownMenuItem asChild>
-              <button @click="auth.logout()" class="block w-full text-left px-4 py-2 hover:bg-accent-foreground/10 rounded">
-                Выйти
-              </button>
-            </UiDropdownMenuItem>
-          </UiDropdownMenuContent>
-        </UiDropdownMenu>
-      </div>
-
-      <!-- Mobile menu button -->
-      <button class="md:hidden text-foreground">
-        &#9776;
-      </button>
-    </div>
-  </nav>
-</template>
+<template><header class="topbar"><div class="topbar-brand"><BrandLogo/><span class="topbar-divider"></span><span class="brand-description">Автобусные перевозки</span></div><div class="topbar-actions"><span class="network-label"><span></span> Всё для вашей поездки</span><NuxtLink :to="auth.isAuthenticated ? '/me/profile' : '/login'" class="account-link"><UserRound :size="15"/><span>{{ auth.isAuthenticated ? (auth.user?.name || 'Личный кабинет') : 'Войти' }}</span><ArrowUpRight :size="14"/></NuxtLink><button class="mobile-menu" :aria-expanded="open" aria-controls="mobile-navigation" :aria-label="open ? 'Закрыть меню' : 'Открыть меню'" @click="open = !open"><X v-if="open" :size="22"/><Menu v-else :size="22"/></button></div></header><div v-if="open" id="mobile-navigation" class="mobile-navigation"><LayoutSidebar mobile/></div></template>
+<style scoped>.topbar{height:80px;display:flex;align-items:center;justify-content:space-between;padding:0 36px;border-bottom:1px solid var(--border);background:var(--card);gap:20px}.topbar-brand,.topbar-actions{display:flex;align-items:center;gap:22px}.topbar-brand :deep(.brand-logo){font-size:25px}.topbar-divider{height:24px;width:1px;background:var(--border)}.brand-description,.network-label{font-size:11px;color:var(--muted-foreground)}.network-label{display:flex;align-items:center;gap:7px}.network-label>span{width:6px;height:6px;border-radius:50%;background:#65a848}.account-link{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:650;white-space:nowrap}.mobile-menu{display:none;background:none;border:0;color:var(--foreground)}.mobile-navigation{display:none}@media(min-width:1024px){.topbar-brand{visibility:hidden}}@media(max-width:1200px){.network-label{display:none}}@media(max-width:1023px){.topbar{height:72px;padding:0 24px}.mobile-menu{display:block}.mobile-navigation{display:block;position:absolute;left:0;right:0;top:72px;background:var(--navy);z-index:30;border-top:1px solid #ffffff20}.brand-description,.topbar-divider{display:none}}@media(max-width:600px){.topbar{padding:0 18px}.topbar-actions{gap:16px}.account-link span{max-width:110px;overflow:hidden;text-overflow:ellipsis}}</style>
