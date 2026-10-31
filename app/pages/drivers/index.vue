@@ -1,1 +1,1 @@
-<template><TransportResourceCatalog kind="drivers"/></template>
+<template><TransportResourceCatalog kind="drivers" /></template>

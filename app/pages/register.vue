@@ -1,1 +1,14 @@
-<script setup lang="ts">definePageMeta({ layout: 'auth', middleware: 'guest' });useHead({ title: 'Регистрация' })</script><template><AuthCard title="Начнём знакомство." description="Создайте аккаунт для доступа в личный кабинет."><AuthRegisterForm/><p class="auth-prompt">Уже есть аккаунт?<NuxtLink to="/login">Войти</NuxtLink></p></AuthCard></template>
+<script setup lang="ts">
+definePageMeta({ layout: "auth", middleware: "guest" });
+useHead({ title: "Регистрация" });
+</script>
+<template>
+  <AuthCard
+    title="Начнём знакомство."
+    description="Создайте аккаунт для доступа в личный кабинет."
+    ><AuthRegisterForm />
+    <p class="auth-prompt">
+      Уже есть аккаунт?<NuxtLink to="/login">Войти</NuxtLink>
+    </p></AuthCard
+  >
+</template>

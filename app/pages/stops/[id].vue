@@ -1,1 +1,1 @@
-<template><TransportResourceDetail kind="stops"/></template>
+<template><TransportResourceDetail kind="stops" /></template>
