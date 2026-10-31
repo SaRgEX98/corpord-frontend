@@ -14,7 +14,7 @@ const profile = { id: 1, email: 'test@example.invalid', name: 'Тест', role: 
 function setup(api, refresh) {
     setActivePinia(createPinia())
     const auth = useAuthStore()
-    globalThis.useNuxtApp = () => ({ $api: api, $refreshSession: async () => {
+    globalThis.useNuxtApp = () => ({ $api: api, $runSessionTransition: operation => operation(), $refreshSession: async () => {
         await refresh?.()
         auth.token = 'access-token'
     } })
@@ -73,4 +73,70 @@ test('logout clears local session; failed global logout preserves usable session
     await assert.rejects(auth.logout())
     assert.equal(auth.isAuthenticated, false)
     assert.equal(auth.initialized, true)
+})
+
+test('late profile after logout cannot restore user state', async () => {
+    let release
+    const auth = setup(() => new Promise(resolve => { release = () => resolve(profile) }))
+    auth.token = 'user-a'
+    const pending = auth.fetchMe()
+    auth.clearSession()
+    release()
+    await pending
+    assert.equal(auth.user, null)
+    assert.equal(auth.token, null)
+    assert.equal(auth.isAuthenticated, false)
+})
+
+test('new login reads its own profile while an old profile request is pending', async () => {
+    let releaseOld
+    let profileReads = 0
+    const secondProfile = { ...profile, id: 2, name: 'Новый пользователь', role: 'admin' }
+    const auth = setup(async path => {
+        if (path === '/auth/login') return { access_token: 'user-b' }
+        if (++profileReads === 1) return new Promise(resolve => { releaseOld = () => resolve(profile) })
+        return secondProfile
+    })
+    auth.token = 'user-a'
+    const oldProfile = auth.fetchMe()
+    await auth.login({ email: 'b@example.invalid', password: 'test-only' })
+    assert.equal(auth.user.id, 2)
+    assert.equal(auth.isAdmin, true)
+    releaseOld()
+    await oldProfile
+    assert.equal(auth.token, 'user-b')
+    assert.equal(auth.user.id, 2)
+})
+
+test('late logout response cannot erase a more recent login', async () => {
+    let releaseLogout
+    const auth = setup(async path => {
+        if (path === '/auth/logout') return new Promise(resolve => { releaseLogout = () => resolve({ message: 'logged out' }) })
+        if (path === '/auth/login') return { access_token: 'user-b' }
+        return { ...profile, id: 2 }
+    })
+    auth.token = 'user-a'
+    auth.user = profile
+    const logout = auth.logout()
+    await auth.login({ email: 'b@example.invalid', password: 'test-only' })
+    releaseLogout()
+    await logout
+    assert.equal(auth.token, 'user-b')
+    assert.equal(auth.user.id, 2)
+})
+
+test('navigation during pending login waits for authentication without starting a cookie refresh', async () => {
+    let releaseLogin
+    let refreshCalls = 0
+    const auth = setup(async path => {
+        if (path === '/auth/login') return new Promise(resolve => { releaseLogin = () => resolve({ access_token: 'user-b' }) })
+        return { ...profile, id: 2 }
+    }, async () => { refreshCalls++ })
+    const login = auth.login({ email: 'b@example.invalid', password: 'test-only' })
+    const navigation = auth.ensureSession()
+    assert.equal(refreshCalls, 0)
+    releaseLogin()
+    await Promise.all([login, navigation])
+    assert.equal(refreshCalls, 0)
+    assert.equal(auth.user.id, 2)
 })

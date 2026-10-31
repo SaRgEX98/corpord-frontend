@@ -6,6 +6,7 @@ import type {
 
 export interface ApiRequestOptions {
     method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
+    retry?: number
     body?: object
 }
 export interface ApiClient {
