@@ -258,6 +258,7 @@ async function submit() {
   const result = buildAdminPayload(props.resource, values.value, editing.value);
   validation.value = result.errors;
   for (const field of props.resource.fields.filter((item) => item.relation)) {
+    if (field.optional && result.payload[field.key] === 0) continue;
     if (
       !references.value[field.relation!]?.some(
         (row) => row.id === result.payload[field.key],
