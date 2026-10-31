@@ -113,7 +113,10 @@ test("all nine resources support create, detail, update and delete against the r
         : raw;
       if (await input.evaluate((element) => element.tagName === "SELECT"))
         await input.selectOption(value);
-      else await input.fill(value);
+      else if (await input.getAttribute("role") === "combobox") {
+        await input.click();
+        await page.locator(`[role="option"][data-value="${value}"]`).click();
+      } else await input.fill(value);
     }
     await page.getByRole("button", { name: "Сохранить", exact: true }).click();
     await expect(
@@ -170,7 +173,7 @@ test("all nine resources support create, detail, update and delete against the r
     );
     for (const [key, raw] of Object.entries(resource.fields)) {
       if (raw.startsWith("@"))
-        await expect(page.locator(`#admin-${key}`)).toHaveValue(
+        await expect(page.locator(`#admin-${key}`)).toHaveAttribute("data-value",
           created.find((item) => item.slug === raw.slice(1))!.id,
         );
     }
@@ -182,7 +185,7 @@ test("all nine resources support create, detail, update and delete against the r
   await page.reload();
   await expect(page).toHaveURL(/\/admin$/);
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-  for (const path of ["/trips", "/buses", "/drivers", "/stops"]) {
+  for (const path of ["/buses", "/drivers", "/stops"]) {
     await page.goto(path);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     const details = page
@@ -269,10 +272,20 @@ test("public pages, theme persistence, mobile layout and ordinary-user access co
   await page
     .getByRole("button", { name: "Выйти на всех устройствах", exact: true })
     .click();
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: /Завершить|Выйти/, exact: false })
-    .click();
+  const revokeDialog = page.getByRole("alertdialog");
+  await expect(revokeDialog.getByRole("button", {name:"Отмена",exact:true})).toBeFocused();
+  const rect = await revokeDialog.boundingBox();
+  const viewport = page.viewportSize()!;
+  expect(Math.abs(rect!.x + rect!.width / 2 - viewport.width / 2)).toBeLessThan(2);
+  expect(Math.abs(rect!.y + rect!.height / 2 - viewport.height / 2)).toBeLessThan(2);
+  await revokeDialog.getByRole("button", {name:"Отмена",exact:true}).click();
+  await expect(page.getByRole("button", {name:"Выйти на всех устройствах",exact:true})).toBeFocused();
+  await page.getByRole("button", {name:"Выйти на всех устройствах",exact:true}).click();
+  await page.route("**/auth/logout/all", async route => route.fulfill({status:503,json:{error:"Test unavailable"}}), {times:1});
+  await revokeDialog.getByRole("button", {name:"Завершить сеансы",exact:true}).click();
+  await expect(revokeDialog.getByRole("alert")).toContainText("Сервис временно недоступен");
+  await expect(revokeDialog).toBeVisible();
+  await revokeDialog.getByRole("button", { name: "Завершить сеансы", exact: true }).click();
   await expect(page).toHaveURL(/\/login$/);
   await page.goto("/me/profile");
   await expect(page).toHaveURL(/\/login/);

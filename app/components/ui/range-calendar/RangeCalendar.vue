@@ -6,7 +6,7 @@ import { RangeCalendarRoot, useForwardPropsEmits } from "reka-ui"
 import { cn } from "@/lib/utils"
 import { RangeCalendarCell, RangeCalendarCellTrigger, RangeCalendarGrid, RangeCalendarGridBody, RangeCalendarGridHead, RangeCalendarGridRow, RangeCalendarHeadCell, RangeCalendarHeader, RangeCalendarHeading, RangeCalendarNextButton, RangeCalendarPrevButton } from "."
 
-const props = defineProps<RangeCalendarRootProps & { class?: HTMLAttributes["class"] }>()
+const props = withDefaults(defineProps<RangeCalendarRootProps & { class?: HTMLAttributes["class"] }>(), { locale: "ru-RU", weekStartsOn: 0, weekdayFormat: "short" })
 
 const emits = defineEmits<RangeCalendarRootEmits>()
 

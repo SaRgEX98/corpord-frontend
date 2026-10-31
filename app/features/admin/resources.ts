@@ -1,4 +1,5 @@
 export type ResourceKey =
+  | "cities"
   | "buses"
   | "busCategories"
   | "busStatuses"
@@ -20,9 +21,11 @@ export interface Field {
   max?: number;
   integer?: boolean;
   help?: string;
+  immutable?: boolean;
 }
 export interface ResourceDefinition {
   key: ResourceKey;
+  deletable?: boolean;
   slug: string;
   title: string;
   singular: string;
@@ -43,6 +46,11 @@ export const tripStatuses = [
 const named = [{ key: "name", label: "Название" }];
 const namedColumns = [{ key: "name", label: "Название" }];
 export const adminResources: ResourceDefinition[] = [
+  { key: "cities", slug: "cities", title: "Города", singular: "город", deletable: false,
+    description: "Города, регионы, часовые пояса и начальные приоритеты подсказок. Часовой пояс после создания неизменяем.",
+    fields: [{key:"name",label:"Название"},{key:"region",label:"Регион"},{key:"timezone",label:"Часовой пояс IANA",immutable:true,help:"Например Europe/Moscow или Asia/Yekaterinburg. После создания изменить нельзя."},{key:"popularity",label:"Начальный приоритет",type:"number",min:0,integer:true}],
+    columns: [{key:"name",label:"Город"},{key:"region",label:"Регион"},{key:"timezone",label:"Часовой пояс"},{key:"popularity",label:"Приоритет"}]
+  },
   {
     key: "trips",
     slug: "trips",
@@ -175,6 +183,8 @@ export const adminResources: ResourceDefinition[] = [
     singular: "остановку",
     description: "Названия, адреса и координаты точек маршрута.",
     fields: [
+      { key: "city_id", label: "Город", type: "select", relation: "cities", optional: true, help: "Свяжите остановку с городом для городских подсказок. Без города задайте часовой пояс явно." },
+      { key: "timezone", label: "Часовой пояс IANA", optional: true, help: "Оставьте пустым, чтобы использовать часовой пояс города." },
       { key: "name", label: "Название" },
       { key: "address", label: "Адрес" },
       { key: "latitude", label: "Широта", type: "number", min: -90, max: 90 },
@@ -273,6 +283,7 @@ export function buildAdminPayload(
       errors[field.key] = "Заполните поле";
       continue;
     }
+    if (field.optional && field.relation && value === "") { payload[field.key] = 0; continue; }
     if (field.type === "number" || field.relation) {
       const number = Number(value);
       if (

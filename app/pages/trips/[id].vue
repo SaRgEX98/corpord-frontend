@@ -8,6 +8,8 @@ import {
   UserRound,
   CalendarDays,
 } from "lucide-vue-next";
+import { routeDate, routeTime } from "~/utils/route-display";
+import type { Stop } from "~/types/domain/transport";
 import { apiErrorMessage } from "~/utils/api-errors";
 import {
   displayDate,
@@ -18,6 +20,9 @@ import {
 } from "~/utils/display";
 const route = useRoute();
 const api = useTransportApi();
+const boarding = computed(() => Number(route.query.boarding_stop_id));
+const alighting = computed(() => Number(route.query.alighting_stop_id));
+const hasSegment = computed(() => Number.isSafeInteger(boarding.value) && boarding.value > 0 && Number.isSafeInteger(alighting.value) && alighting.value > 0);
 const id = computed(() => Number(route.params.id));
 const {
   data: trip,
@@ -34,6 +39,8 @@ useHead({
 const sortedStops = computed(() =>
   [...(trip.value?.stops || [])].sort((a, b) => a.stop_order - b.stop_order),
 );
+function stopTime(value: string, stop?: Stop) { return routeTime(value, stop?.effective_timezone || "UTC"); }
+function stopDate(value: string, stop?: Stop) { return routeDate(value, stop?.effective_timezone || "UTC").split('-').reverse().join('.'); }
 const errorMessage = computed(() =>
   error.value ? apiErrorMessage(error.value) : null,
 );
@@ -58,7 +65,7 @@ const errorMessage = computed(() =>
             }}
           </h1>
           <p class="page-description">
-            Рейс № {{ trip.id }} · {{ displayDate(trip.start_time) }} ·
+            Рейс № {{ trip.id }} · {{ stopDate(trip.start_time, sortedStops[0]?.stop) }} ·
             {{ displayDuration(trip.start_time, trip.end_time) }}
           </p>
         </div>
@@ -66,6 +73,7 @@ const errorMessage = computed(() =>
           tripStatusLabels[trip.status] || trip.status
         }}</span>
       </div>
+      <TransportSegmentQuote v-if="hasSegment" :trip-id="id" :boarding="boarding" :alighting="alighting" />
       <div class="detail-grid">
         <section class="panel card-pad">
           <div class="section-head">
@@ -73,19 +81,19 @@ const errorMessage = computed(() =>
             <span class="badge">{{ sortedStops.length }} остановок</span>
           </div>
           <p class="schedule-note">
-            Время отображается в часовом поясе вашего устройства.
+            У каждой остановки указан её часовой пояс. Если пояс не задан, время показано в UTC.
           </p>
           <ol v-if="sortedStops.length" class="timeline">
             <li v-for="(item, index) in sortedStops" :key="item.id">
               <div class="timeline-time">
                 <strong>{{
-                  displayTime(
-                    index === 0 ? item.departure_time : item.arrival_time,
+                  stopTime(
+                    index === 0 ? item.departure_time : item.arrival_time, item.stop,
                   )
                 }}</strong
                 ><span>{{
-                  displayDate(
-                    index === 0 ? item.departure_time : item.arrival_time,
+                  stopDate(
+                    index === 0 ? item.departure_time : item.arrival_time, item.stop,
                   )
                 }}</span>
               </div>
@@ -94,11 +102,11 @@ const errorMessage = computed(() =>
                 <NuxtLink :to="`/stops/${item.stop.id}`"
                   >{{ item.stop.name }} <ArrowUpRight :size="12"
                 /></NuxtLink>
-                <p>{{ item.stop.address }}</p>
+                <p>{{ item.stop.address }} · {{ item.stop.effective_timezone || "UTC (пояс уточняется)" }}</p>
                 <div class="stop-timing">
-                  <span>Прибытие {{ displayTime(item.arrival_time) }}</span
+                  <span>Прибытие {{ stopTime(item.arrival_time,item.stop) }}</span
                   ><span
-                    >Отправление {{ displayTime(item.departure_time) }}</span
+                    >Отправление {{ stopTime(item.departure_time,item.stop) }}</span
                   >
                 </div>
                 <p v-if="index < sortedStops.length - 1" class="segment-price">
@@ -114,9 +122,10 @@ const errorMessage = computed(() =>
             title="Остановки ещё не добавлены"
             description="Подробности маршрута появятся после публикации расписания."
           />
+          <TransportRouteMap :points="sortedStops.map(item => item.stop)" />
         </section>
         <aside class="details-sidebar">
-          <section class="panel card-pad">
+          <section v-if="!hasSegment" class="panel card-pad">
             <p class="text-muted price-label">Базовая стоимость рейса</p>
             <p class="detail-price">
               {{ displayPrice(trip.base_price) }} <span>₽</span>
@@ -160,7 +169,7 @@ const errorMessage = computed(() =>
             <dl class="schedule-data">
               <dt>Отправление</dt>
               <dd>
-                {{ displayDate(trip.start_time) }},
+                {{ stopDate(trip.start_time, sortedStops[0]?.stop) }},
                 {{ displayTime(trip.start_time) }}
               </dd>
               <dt>Прибытие</dt>
