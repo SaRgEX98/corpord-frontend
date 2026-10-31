@@ -44,8 +44,8 @@ export function createSessionClient(fetch: $Fetch, baseURL: string, session: Ses
         retry: 1,
         retryStatusCodes: [401],
         onRequest({ options }) {
-            const operation = options as typeof options & { [requestVersion]?: number }
-            operation[requestVersion] ??= session.getVersion()
+            const operation = options as typeof options & { [requestVersion]?: number; sessionVersion?: number }
+            operation[requestVersion] ??= operation.sessionVersion ?? session.getVersion()
             if (operation[requestVersion] !== session.getVersion()) throw new Error('Сессия изменилась. Повторите действие.')
             options.headers = new Headers(options.headers)
             const token = session.getToken()
@@ -80,5 +80,5 @@ export function createSessionClient(fetch: $Fetch, baseURL: string, session: Ses
             if (version === session.getVersion()) session.clearSession()
         },
     })
-    return { api, refreshSession, runSessionTransition }
+    return { api, refreshSession, runSessionTransition, getSessionVersion: () => session.getVersion() }
 }

@@ -3,7 +3,7 @@ import type { User } from '../types/domain/user'
 import type { ApiClient } from './transport.api'
 
 type SessionTransition = <T>(operation: () => Promise<T>) => Promise<T>
-export function createAuthApi(api: ApiClient, refresh?: () => Promise<void>, transition?: SessionTransition) {
+export function createAuthApi(api: ApiClient, refresh?: () => Promise<void>, transition?: SessionTransition, getVersion?: () => number) {
     const run: SessionTransition = transition ?? (operation => operation())
     return {
         login: (body: LoginRequestDto) => run(() => api<LoginResponseDto>('/auth/login', { method: 'POST', body })),
@@ -15,10 +15,11 @@ export function createAuthApi(api: ApiClient, refresh?: () => Promise<void>, tra
         },
         logout: () => run(() => api<{ message: string }>('/auth/logout', { method: 'POST' })),
         logoutAll: async () => {
+            const sessionVersion = getVersion?.()
             // Recover an expired access token before taking the cookie-write queue.
             // The queued mutation cannot recursively refresh behind its own lock.
             if (transition) await api<User>('/users/me')
-            return run(() => api<{ message: string }>('/auth/logout/all', { method: 'POST', ...(transition ? { retry: 0 } : {}) }))
+            return run(() => api<{ message: string }>('/auth/logout/all', { method: 'POST', ...(transition ? { retry: 0 } : {}), ...(sessionVersion !== undefined ? { sessionVersion } : {}) }))
         },
     }
 }
@@ -26,7 +27,7 @@ export function createAuthApi(api: ApiClient, refresh?: () => Promise<void>, tra
 // Resolve Nuxt dependencies at call time: stores can import this module safely.
 function currentAuthApi() {
     const app = useNuxtApp()
-    return createAuthApi(app.$api, app.$refreshSession, app.$runSessionTransition)
+    return createAuthApi(app.$api, app.$refreshSession, app.$runSessionTransition, app.$getSessionVersion)
 }
 export const authApi = {
     login: (dto: LoginRequestDto) => currentAuthApi().login(dto),

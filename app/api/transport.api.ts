@@ -7,6 +7,7 @@ import type {
 export interface ApiRequestOptions {
     method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
     retry?: number
+    sessionVersion?: number
     body?: object
 }
 export interface ApiClient {
