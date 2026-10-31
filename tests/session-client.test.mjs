@@ -197,3 +197,22 @@ test('late second 401 cannot clear the session of a newly logged in user', async
     assert.equal(client.clears(), 0)
     assert.equal(client.calls.length, 3)
 })
+
+test('identity changed by another refresh waiter cannot inherit an in-flight mutation retry', async () => {
+    let release
+    const client = setup(call => {
+        if (call.path.endsWith('/auth/refresh')) return new Promise(resolve => { release = () => resolve(json({ access_token: 'user-a-fresh' })) })
+        if (call.authorization === 'Bearer user-b') return json({ message: 'must never execute' }, 201)
+        return json({}, 401)
+    })
+    const rotation = client.refreshSession()
+    rotation.then(() => client.replace('user-b'))
+    const mutation = client.api('/admin/bus/', { method: 'POST', body: { capacity: 30 } })
+    await new Promise(resolve => setImmediate(resolve))
+    release()
+    await rotation
+    await assert.rejects(mutation)
+    assert.equal(client.calls.length, 2)
+    assert.equal(client.token(), 'user-b')
+    assert.equal(client.clears(), 0)
+})

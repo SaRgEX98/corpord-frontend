@@ -33,7 +33,9 @@ export function createSessionClient(fetch: $Fetch, baseURL: string, session: Ses
         }
         return rotate()
     }
-    const requestVersions = new WeakMap<object, number>()
+    // Enumerable symbol survives ofetch's options spread on retries. A retry must
+    // retain the identity that started the operation instead of adopting a new one.
+    const requestVersion = Symbol('corpord.sessionVersion')
     const api = fetch.create({
         baseURL,
         credentials: 'include',
@@ -42,7 +44,9 @@ export function createSessionClient(fetch: $Fetch, baseURL: string, session: Ses
         retry: 1,
         retryStatusCodes: [401],
         onRequest({ options }) {
-            requestVersions.set(options, session.getVersion())
+            const operation = options as typeof options & { [requestVersion]?: number }
+            operation[requestVersion] ??= session.getVersion()
+            if (operation[requestVersion] !== session.getVersion()) throw new Error('Сессия изменилась. Повторите действие.')
             options.headers = new Headers(options.headers)
             const token = session.getToken()
             if (token) options.headers.set('Authorization', `Bearer ${token}`)
@@ -57,7 +61,7 @@ export function createSessionClient(fetch: $Fetch, baseURL: string, session: Ses
                 options.retry = 0
                 return
             }
-            const version = requestVersions.get(options)
+            const version = (options as typeof options & { [requestVersion]?: number })[requestVersion]
             // Never retry an old user's operation under a new identity, or clear
             // that new session because an old request finished late.
             if (version !== session.getVersion()) { options.retry = 0; return }
@@ -67,6 +71,7 @@ export function createSessionClient(fetch: $Fetch, baseURL: string, session: Ses
             if (options.retry) {
                 try {
                     await refreshSession()
+                    if (version !== session.getVersion()) options.retry = 0
                     return
                 } catch {
                     options.retry = 0
