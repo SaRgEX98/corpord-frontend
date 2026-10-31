@@ -1,10 +1,10 @@
 FROM node:26.1-alpine AS build
 WORKDIR /app
 
-# Copy package.json and your lockfile, here we add pnpm-lock.yaml for illustration
+# Install the exact dependency versions recorded in the lockfile.
 COPY package.json package-lock.json ./
 
-RUN npm i
+RUN npm ci
 
 # Copy the entire project
 COPY . ./
