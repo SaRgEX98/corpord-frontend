@@ -5,6 +5,7 @@ import { createSessionClient } from '../app/api/session-client.ts'
 
 function setup(handler) {
     let token = 'expired'
+    let version = 0
     let clears = 0
     const calls = []
     const fetch = createFetch({ fetch: async (request, options) => {
@@ -14,10 +15,11 @@ function setup(handler) {
     } })
     const client = createSessionClient(fetch, 'https://api.test/api/v1', {
         getToken: () => token,
+        getVersion: () => version,
         setToken: value => { token = value },
-        clearSession: () => { token = null; clears++ },
+        clearSession: () => { token = null; version++; clears++ },
     })
-    return { ...client, calls, token: () => token, clears: () => clears }
+    return { ...client, calls, token: () => token, replace: value => { token = value; version++ }, clears: () => clears }
 }
 const json = (data, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } })
 
@@ -100,4 +102,98 @@ test('second 401 after a successful rotation ends session without retry loop', a
     await assert.rejects(client.api('/users/me'))
     assert.equal(client.calls.length, 3)
     assert.equal(client.clears(), 1)
+})
+
+test('late refresh cannot restore a logged out identity or overwrite a new login', async () => {
+    for (const nextToken of [null, 'user-b']) {
+        let release
+        const client = setup(() => new Promise(resolve => { release = () => resolve(json({ access_token: 'user-a-late' })) }))
+        const pending = client.refreshSession()
+        await new Promise(resolve => setImmediate(resolve))
+        client.replace(nextToken)
+        release()
+        await assert.rejects(pending, /Сессия изменилась/)
+        assert.equal(client.token(), nextToken)
+    }
+})
+
+test('an old identity request never retries its mutation as the newly logged in user', async () => {
+    let release
+    const client = setup(() => new Promise(resolve => { release = () => resolve(json({}, 401)) }))
+    const pending = client.api('/admin/bus/', { method: 'POST', body: { capacity: 30 } })
+    await new Promise(resolve => setImmediate(resolve))
+    client.replace('user-b')
+    release()
+    await assert.rejects(pending)
+    assert.equal(client.token(), 'user-b')
+    assert.equal(client.calls.length, 1)
+    assert.equal(client.clears(), 0)
+})
+
+test('a new identity refresh does not join a pending rotation for the previous user', async () => {
+    let releaseOld
+    let refreshCount = 0
+    const client = setup(() => {
+        if (++refreshCount === 1) return new Promise(resolve => { releaseOld = () => resolve(json({ access_token: 'user-a-late' })) })
+        return json({ access_token: 'user-b-fresh' })
+    })
+    const previous = client.refreshSession()
+    await new Promise(resolve => setImmediate(resolve))
+    client.replace('user-b')
+    const next = client.refreshSession()
+    const previousResult = assert.rejects(previous)
+    releaseOld()
+    await previousResult
+    await next
+    assert.equal(client.token(), 'user-b-fresh')
+    assert.equal(refreshCount, 2)
+})
+
+test('cookie-writing login/logout wait for pending refresh and later rotations wait for auth transitions', async () => {
+    let releaseRefresh
+    const order = []
+    const client = setup(() => new Promise(resolve => {
+        order.push('refresh dispatched')
+        releaseRefresh = () => { order.push('refresh cookie applied'); resolve(json({ access_token: 'fresh' })) }
+    }))
+    const pending = client.refreshSession()
+    await new Promise(resolve => setImmediate(resolve))
+    let releaseLogin
+    const login = client.runSessionTransition(() => new Promise(resolve => {
+        order.push('login dispatched')
+        releaseLogin = () => { order.push('login cookie applied'); resolve() }
+    }))
+    await new Promise(resolve => setImmediate(resolve))
+    assert.deepEqual(order, ['refresh dispatched'])
+    releaseRefresh()
+    await pending
+    await new Promise(resolve => setImmediate(resolve))
+    assert.deepEqual(order, ['refresh dispatched', 'refresh cookie applied', 'login dispatched'])
+    const subsequent = client.refreshSession()
+    await new Promise(resolve => setImmediate(resolve))
+    assert.equal(order.filter(item => item === 'refresh dispatched').length, 1)
+    releaseLogin()
+    await login
+    await new Promise(resolve => setImmediate(resolve))
+    releaseRefresh()
+    await subsequent
+    assert.deepEqual(order.slice(2), ['login dispatched', 'login cookie applied', 'refresh dispatched', 'refresh cookie applied'])
+})
+
+test('late second 401 cannot clear the session of a newly logged in user', async () => {
+    let releaseRetry
+    let protectedCalls = 0
+    const client = setup(call => {
+        if (call.path.endsWith('/auth/refresh')) return json({ access_token: 'fresh' })
+        if (++protectedCalls === 1) return json({}, 401)
+        return new Promise(resolve => { releaseRetry = () => resolve(json({}, 401)) })
+    })
+    const pending = client.api('/users/me')
+    await new Promise(resolve => setImmediate(resolve))
+    client.replace('user-b')
+    releaseRetry()
+    await assert.rejects(pending)
+    assert.equal(client.token(), 'user-b')
+    assert.equal(client.clears(), 0)
+    assert.equal(client.calls.length, 3)
 })

@@ -4,18 +4,36 @@ import type { LoginResponseDto } from '../types/dto/auth.dto'
 
 interface SessionAccess {
     getToken(): string | null
+    getVersion(): number
     setToken(token: string): void
     clearSession(): void
 }
 
 /** One refresh rotation is shared by initialization, explicit refresh and 401 retries. */
 export function createSessionClient(fetch: $Fetch, baseURL: string, session: SessionAccess) {
-    const refreshSession = createSessionRefresh(
-        () => fetch<LoginResponseDto>('/auth/refresh', {
-            baseURL, method: 'POST', credentials: 'include', retry: 0,
-        }),
-        token => session.setToken(token),
-    )
+    let cookieQueue: Promise<unknown> = Promise.resolve()
+    function runSessionTransition<T>(operation: () => Promise<T>): Promise<T> {
+        const result = cookieQueue.then(operation, operation)
+        cookieQueue = result.then(() => undefined, () => undefined)
+        return result
+    }
+    let refreshVersion: number | undefined
+    let rotate: ReturnType<typeof createSessionRefresh>
+    function refreshSession() {
+        const version = session.getVersion()
+        if (refreshVersion !== version) {
+            refreshVersion = version
+            rotate = createSessionRefresh(async () => {
+                const result = await runSessionTransition(() => fetch<LoginResponseDto>('/auth/refresh', {
+                    baseURL, method: 'POST', credentials: 'include', retry: 0,
+                }))
+                if (version !== session.getVersion()) throw new Error('Сессия изменилась. Повторите действие.')
+                return result
+            }, token => session.setToken(token))
+        }
+        return rotate()
+    }
+    const requestVersions = new WeakMap<object, number>()
     const api = fetch.create({
         baseURL,
         credentials: 'include',
@@ -24,6 +42,7 @@ export function createSessionClient(fetch: $Fetch, baseURL: string, session: Ses
         retry: 1,
         retryStatusCodes: [401],
         onRequest({ options }) {
+            requestVersions.set(options, session.getVersion())
             options.headers = new Headers(options.headers)
             const token = session.getToken()
             if (token) options.headers.set('Authorization', `Bearer ${token}`)
@@ -38,12 +57,14 @@ export function createSessionClient(fetch: $Fetch, baseURL: string, session: Ses
                 options.retry = 0
                 return
             }
+            const version = requestVersions.get(options)
+            // Never retry an old user's operation under a new identity, or clear
+            // that new session because an old request finished late.
+            if (version !== session.getVersion()) { options.retry = 0; return }
+            const sentToken = new Headers(options.headers).get('Authorization')
+            const current = session.getToken()
+            if (current && sentToken !== `Bearer ${current}`) return
             if (options.retry) {
-                // A late 401 from the old token can arrive after another request
-                // completed rotation. Retry with the current token directly.
-                const sentToken = new Headers(options.headers).get('Authorization')
-                const current = session.getToken()
-                if (current && sentToken !== `Bearer ${current}`) return
                 try {
                     await refreshSession()
                     return
@@ -51,8 +72,8 @@ export function createSessionClient(fetch: $Fetch, baseURL: string, session: Ses
                     options.retry = 0
                 }
             }
-            session.clearSession()
+            if (version === session.getVersion()) session.clearSession()
         },
     })
-    return { api, refreshSession }
+    return { api, refreshSession, runSessionTransition }
 }
