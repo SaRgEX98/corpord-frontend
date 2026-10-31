@@ -74,3 +74,21 @@ Frontend callback выполняет общий refresh и загрузку `/us
 ## Зависимость развёртывания
 
 В ходе реального E2E обнаружено, что исходный backend commit b6b1e94 возвращает пустую `role` в профиле и admin user responses. Исправление без изменения маршрутов/DTO: [backend PR #13](https://github.com/SaRgEX98/corpord-backend/pull/13), commit `3c8d93f`. Перед frontend требуется merge и GHCR сборка этого backend исправления. Обычная роль `moderator` присутствует в миграциях и не получает административного доступа.
+
+
+## Дополнение: информационный поиск маршрутов (2026-11-01)
+
+Новый контракт описан отдельно в backend `docs/routes.openapi.json` и
+`docs/ROUTE_SEARCH_API.md`; прежний Swagger/fixture остаётся проверкой legacy API.
+`app/api/routes.api.ts` покрывает внутренние подсказки, каноническую точку,
+остановки выбранного города, поиск участков, календарь и quote.
+В `transport.api.ts` добавлены административные чтение/создание/обновление городов;
+удаление города не заявлено как доступное действие. Остановки поддерживают
+`city_id`, `timezone` и read-only `effective_timezone`.
+Геопоиск `/geo/suggest` используется отдельным компонентом внешних мест с явным
+сопоставлением остановке Corpord. Он не подменяет API рейсов.
+
+Проверки новых контрактов: `tests/route-experience.test.mjs`,
+`tests/e2e/routes-integration.spec.ts`, `tests/e2e/route-ui.spec.ts` и отдельная
+карта `tests/e2e/route-map.spec.ts`. Ограничения и фактические результаты:
+[ROUTE_DELIVERY.md](ROUTE_DELIVERY.md).
