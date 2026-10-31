@@ -1,5 +1,74 @@
 <script setup lang="ts">
-import { LoaderCircle, SearchX, CircleAlert, RotateCw } from 'lucide-vue-next'
-defineProps<{ pending?: boolean; error?: string | null; empty?: boolean; title?: string; description?: string }>()
-defineEmits<{ retry: [] }>()
-</script><template><div v-if="pending || error || empty" class="data-state panel" :role="error ? 'alert' : 'status'" :aria-busy="pending"><LoaderCircle v-if="pending" :size="29" class="spinning"/><CircleAlert v-else-if="error" :size="29"/><SearchX v-else :size="29"/><h2>{{ pending ? 'Загружаем данные…' : error ? 'Не удалось загрузить данные' : (title || 'Пока ничего нет') }}</h2><p>{{ pending ? 'Это займёт немного времени.' : error || description || 'Попробуйте изменить параметры поиска или зайдите позже.' }}</p><button v-if="error" class="btn btn-secondary" @click="$emit('retry')"><RotateCw :size="14"/>Повторить</button></div></template><style scoped>.data-state{display:flex;align-items:center;justify-content:center;text-align:center;flex-direction:column;padding:55px 24px;gap:15px;color:var(--muted-foreground)}h2{font-size:17px;color:var(--foreground)}p{max-width:450px;line-height:1.7;font-size:13px}.spinning{animation:spin 1.2s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}</style>
+import { LoaderCircle, SearchX, CircleAlert, RotateCw } from "lucide-vue-next";
+defineProps<{
+  pending?: boolean;
+  error?: string | null;
+  empty?: boolean;
+  title?: string;
+  description?: string;
+}>();
+defineEmits<{ retry: [] }>();
+</script>
+<template>
+  <div
+    v-if="pending || error || empty"
+    class="data-state panel"
+    :role="error ? 'alert' : 'status'"
+    :aria-busy="pending"
+  >
+    <LoaderCircle v-if="pending" :size="29" class="spinning" /><CircleAlert
+      v-else-if="error"
+      :size="29"
+    /><SearchX v-else :size="29" />
+    <h2>
+      {{
+        pending
+          ? "Загружаем данные…"
+          : error
+            ? "Не удалось загрузить данные"
+            : title || "Пока ничего нет"
+      }}
+    </h2>
+    <p>
+      {{
+        pending
+          ? "Это займёт немного времени."
+          : error ||
+            description ||
+            "Попробуйте изменить параметры поиска или зайдите позже."
+      }}
+    </p>
+    <button v-if="error" class="btn btn-secondary" @click="$emit('retry')">
+      <RotateCw :size="14" />Повторить
+    </button>
+  </div>
+</template>
+<style scoped>
+.data-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  flex-direction: column;
+  padding: 55px 24px;
+  gap: 15px;
+  color: var(--muted-foreground);
+}
+h2 {
+  font-size: 17px;
+  color: var(--foreground);
+}
+p {
+  max-width: 450px;
+  line-height: 1.7;
+  font-size: 13px;
+}
+.spinning {
+  animation: spin 1.2s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+</style>

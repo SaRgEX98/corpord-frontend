@@ -1,1 +1,3 @@
-<template><NuxtLayout name="default"><slot/></NuxtLayout></template>
+<template>
+  <NuxtLayout name="default"><slot /></NuxtLayout>
+</template>

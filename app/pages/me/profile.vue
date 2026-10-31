@@ -1,9 +1,154 @@
 <script setup lang="ts">
-import { ArrowUpRight, UserRound, ShieldCheck, LogOut, Settings2, Route } from 'lucide-vue-next'
-import { useAuthStore } from '~/store/auth'
-import { displayDate } from '~/utils/display'
-definePageMeta({ layout: 'me' })
-useHead({ title: 'Личный кабинет' })
-const auth = useAuthStore()
-const role = computed(() => auth.user?.role === 'admin' ? 'Администратор' : 'Пользователь')
-</script><template><div class="container-page"><div class="page-heading"><div><p class="page-eyebrow">ВАШЕ ЛИЧНОЕ ПРОСТРАНСТВО</p><h1 class="page-title">Здравствуйте, {{ auth.user?.name || 'путешественник' }}.</h1><p class="page-description">Информация о вашем аккаунте и быстрый доступ к возможностям Corpord.</p></div><NuxtLink to="/me/settings" class="btn btn-secondary"><Settings2 :size="15"/>Настройки</NuxtLink></div><div class="detail-grid"><section class="panel card-pad"><div class="profile-header"><div class="profile-avatar">{{ auth.user?.name?.slice(0,1).toLocaleUpperCase('ru') || 'C' }}</div><div><h2>{{ auth.user?.name }}</h2><span class="badge badge-blue"><ShieldCheck v-if="auth.isAdmin" :size="12"/>{{ role }}</span></div></div><dl class="info-list"><div><dt>Имя</dt><dd>{{ auth.user?.name }}</dd></div><div><dt>Электронная почта</dt><dd>{{ auth.user?.email }}</dd></div><div><dt>Роль</dt><dd>{{ role }}</dd></div><div><dt>Дата регистрации</dt><dd>{{ displayDate(auth.user?.created_at) }}</dd></div></dl><p class="profile-hint">Данные аккаунта доступны для просмотра. Если требуется изменение, обратитесь к администратору.</p><NuxtLink to="/logout" class="logout-link"><LogOut :size="14"/>Выйти из аккаунта</NuxtLink></section><aside class="profile-cards"><section class="panel card-pad"><Route :size="27" class="text-muted"/><h2>Куда отправимся?</h2><p>Посмотрите расписание и найдите маршрут для следующей поездки.</p><NuxtLink to="/trips" class="btn btn-primary">К расписанию<ArrowUpRight :size="14"/></NuxtLink></section><section v-if="auth.isAdmin" class="panel card-pad"><ShieldCheck :size="24" class="text-muted"/><h2>Рабочее пространство</h2><p>Управляйте рейсами, транспортом и справочниками.</p><NuxtLink to="/admin" class="btn btn-secondary">Управление<ArrowUpRight :size="14"/></NuxtLink></section></aside></div></div></template><style scoped>.profile-header{display:flex;align-items:center;gap:18px;padding-bottom:28px;margin-bottom:28px;border-bottom:1px solid var(--border)}.profile-avatar{width:66px;height:66px;background:#e5ecff;color:#245ce3;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:650}.profile-header h2{font-size:21px;margin-bottom:9px}.profile-hint{font-size:11px;line-height:1.8;color:var(--muted-foreground);border-top:1px solid var(--border);margin-top:28px;padding-top:22px}.logout-link{font-size:11px;color:#bd3838;display:inline-flex;align-items:center;gap:7px;margin-top:22px}.profile-cards{display:flex;flex-direction:column;gap:20px}.profile-cards h2{font-size:21px;margin-top:20px}.profile-cards p{font-size:12px;line-height:1.8;color:var(--muted-foreground);margin:13px 0 24px}.profile-cards .btn{width:100%}</style>
+import {
+  ArrowUpRight,
+  UserRound,
+  ShieldCheck,
+  LogOut,
+  Settings2,
+  Route,
+} from "lucide-vue-next";
+import { useAuthStore } from "~/store/auth";
+import { displayDate } from "~/utils/display";
+definePageMeta({ layout: "me" });
+useHead({ title: "Личный кабинет" });
+const auth = useAuthStore();
+const role = computed(() =>
+  auth.user?.role === "admin" ? "Администратор" : "Пользователь",
+);
+</script>
+<template>
+  <div class="container-page">
+    <div class="page-heading">
+      <div>
+        <p class="page-eyebrow">ВАШЕ ЛИЧНОЕ ПРОСТРАНСТВО</p>
+        <h1 class="page-title">
+          Здравствуйте, {{ auth.user?.name || "путешественник" }}.
+        </h1>
+        <p class="page-description">
+          Информация о вашем аккаунте и быстрый доступ к возможностям Corpord.
+        </p>
+      </div>
+      <NuxtLink to="/me/settings" class="btn btn-secondary"
+        ><Settings2 :size="15" />Настройки</NuxtLink
+      >
+    </div>
+    <div class="detail-grid">
+      <section class="panel card-pad">
+        <div class="profile-header">
+          <div class="profile-avatar">
+            {{ auth.user?.name?.slice(0, 1).toLocaleUpperCase("ru") || "C" }}
+          </div>
+          <div>
+            <h2>{{ auth.user?.name }}</h2>
+            <span class="badge badge-blue"
+              ><ShieldCheck v-if="auth.isAdmin" :size="12" />{{ role }}</span
+            >
+          </div>
+        </div>
+        <dl class="info-list">
+          <div>
+            <dt>Имя</dt>
+            <dd>{{ auth.user?.name }}</dd>
+          </div>
+          <div>
+            <dt>Электронная почта</dt>
+            <dd>{{ auth.user?.email }}</dd>
+          </div>
+          <div>
+            <dt>Роль</dt>
+            <dd>{{ role }}</dd>
+          </div>
+          <div>
+            <dt>Дата регистрации</dt>
+            <dd>{{ displayDate(auth.user?.created_at) }}</dd>
+          </div>
+        </dl>
+        <p class="profile-hint">
+          Данные аккаунта доступны для просмотра. Если требуется изменение,
+          обратитесь к администратору.
+        </p>
+        <NuxtLink to="/logout" class="logout-link"
+          ><LogOut :size="14" />Выйти из аккаунта</NuxtLink
+        >
+      </section>
+      <aside class="profile-cards">
+        <section class="panel card-pad">
+          <Route :size="27" class="text-muted" />
+          <h2>Куда отправимся?</h2>
+          <p>Посмотрите расписание и найдите маршрут для следующей поездки.</p>
+          <NuxtLink to="/trips" class="btn btn-primary"
+            >К расписанию<ArrowUpRight :size="14"
+          /></NuxtLink>
+        </section>
+        <section v-if="auth.isAdmin" class="panel card-pad">
+          <ShieldCheck :size="24" class="text-muted" />
+          <h2>Рабочее пространство</h2>
+          <p>Управляйте рейсами, транспортом и справочниками.</p>
+          <NuxtLink to="/admin" class="btn btn-secondary"
+            >Управление<ArrowUpRight :size="14"
+          /></NuxtLink>
+        </section>
+      </aside>
+    </div>
+  </div>
+</template>
+<style scoped>
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding-bottom: 28px;
+  margin-bottom: 28px;
+  border-bottom: 1px solid var(--border);
+}
+.profile-avatar {
+  width: 66px;
+  height: 66px;
+  background: #e5ecff;
+  color: #245ce3;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 650;
+}
+.profile-header h2 {
+  font-size: 21px;
+  margin-bottom: 9px;
+}
+.profile-hint {
+  font-size: 11px;
+  line-height: 1.8;
+  color: var(--muted-foreground);
+  border-top: 1px solid var(--border);
+  margin-top: 28px;
+  padding-top: 22px;
+}
+.logout-link {
+  font-size: 11px;
+  color: #bd3838;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 22px;
+}
+.profile-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.profile-cards h2 {
+  font-size: 21px;
+  margin-top: 20px;
+}
+.profile-cards p {
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--muted-foreground);
+  margin: 13px 0 24px;
+}
+.profile-cards .btn {
+  width: 100%;
+}
+</style>
