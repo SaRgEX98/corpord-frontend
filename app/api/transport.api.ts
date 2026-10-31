@@ -1,5 +1,7 @@
 import type {
   Bus,
+  City,
+  CityInput,
   BusInput,
   CreatedTrip,
   Driver,
@@ -65,6 +67,16 @@ export function createTransportApi(api: ApiClient) {
     stops: trip.stops ?? [],
   });
   return {
+    cities: {
+      list: async () => (await api<{items: City[]} | null>("/admin/cities"))?.items ?? [],
+      get: async (id: number) => {
+        const item = (await api<{items: City[]}>("/admin/cities")).items.find(city => city.id === id);
+        if (!item) throw new Error("Город не найден");
+        return item;
+      },
+      create: (body: CityInput) => api<City>("/admin/cities", {method:"POST",body}),
+      update: (id: number, body: CityInput) => api<City>(`/admin/cities/${id}`, {method:"PUT",body}),
+    },
     buses: resource<Bus, BusInput>(api, "/bus/"),
     busCategories: resource<
       NamedEntity,

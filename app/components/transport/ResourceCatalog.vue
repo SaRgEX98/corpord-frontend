@@ -122,27 +122,8 @@ useHead({ title: computed(() => config.value.title) });
                 : 'Имя или телефон водителя'
           "
           :aria-label="`Поиск: ${config.title.toLowerCase()}`" /></label
-      ><select
-        v-if="categories.length"
-        v-model="category"
-        class="input toolbar-select"
-        aria-label="Категория автобуса"
-      >
-        <option value="">Все категории</option>
-        <option v-for="item in categories" :key="item" :value="item">
-          {{ item }}
-        </option></select
-      ><select
-        v-if="statuses.length"
-        v-model="status"
-        class="input toolbar-select"
-        aria-label="Статус"
-      >
-        <option value="">Все статусы</option>
-        <option v-for="item in statuses" :key="item" :value="item">
-          {{ item }}
-        </option>
-      </select>
+      ><UiTokenSelect v-if="categories.length" v-model="category" class="toolbar-select" label="Категория автобуса" :options="[{ value: '', label: 'Все категории' }, ...categories.map(item => ({ value: item, label: item }))]" />
+      <UiTokenSelect v-if="statuses.length" v-model="status" class="toolbar-select" label="Статус" :options="[{ value: '', label: 'Все статусы' }, ...statuses.map(item => ({ value: item, label: item }))]" />
     </div>
     <p v-if="!pending && !error" class="result-count">
       Найдено: {{ filtered.length }}

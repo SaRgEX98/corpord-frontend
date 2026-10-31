@@ -42,13 +42,18 @@ export interface DriverInput {
   phone_number: string;
   status: number;
 }
+export interface CityInput { name: string; region: string; timezone: string; popularity: number }
+export interface City extends CityInput { id: number }
 export interface StopInput {
+  city_id?: number | null;
+  timezone?: string | null;
   name: string;
   address: string;
   latitude: number;
   longitude: number;
 }
 export interface Stop extends StopInput {
+  effective_timezone?: string | null;
   id: number;
   created_at?: string;
   updated_at?: string;

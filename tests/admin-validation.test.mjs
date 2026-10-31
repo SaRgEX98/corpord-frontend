@@ -47,7 +47,7 @@ test("coordinates preserve zero and enforce geographic bounds and finite numbers
     longitude: "0",
   };
   assert.deepEqual(buildAdminPayload(resource("stops"), values), {
-    payload: { name: "Остановка", address: "Адрес", latitude: 0, longitude: 0 },
+    payload: { name: "Остановка", address: "Адрес", latitude: 0, longitude: 0, city_id: 0, timezone: "" },
     errors: {},
   });
   for (const latitude of ["", "91", "-91", "Infinity", "NaN"])

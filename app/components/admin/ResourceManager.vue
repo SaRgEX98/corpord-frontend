@@ -93,6 +93,7 @@ function routeName(row: Record<string, unknown>) {
   return first ? `${first} → ${last}` : "Маршрут без остановок";
 }
 function recordLabel(key: ResourceKey, row: Record<string, unknown>): string {
+  if (key === "cities") return `${row.name} · ${row.region}`;
   if (key === "buses") return `${row.brand} · ${row.license_plate}`;
   if (key === "drivers") return fullName(row);
   if (key === "trips")
@@ -519,38 +520,16 @@ async function remove() {
                 >(необязательно)</span
               ></label
             >
-            <select
+            <UiTokenSelect
               v-if="field.type === 'select'"
               :id="`admin-${field.key}`"
               v-model="values[field.key]"
-              class="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm focus:ring-2 focus:ring-ring disabled:opacity-50"
-              :aria-invalid="!!validation[field.key]"
+              :label="field.label"
+              :invalid="!!validation[field.key]"
               :aria-describedby="`help-${field.key}`"
-              :disabled="
-                busy || (field.relation && !!referenceErrors[field.relation])
-              "
-              :required="!field.optional"
-            >
-              <option value="" disabled>Выберите…</option>
-              <template v-if="field.relation"
-                ><option
-                  v-for="option in references[field.relation] ?? []"
-                  :key="option.id"
-                  :value="String(option.id)"
-                >
-                  {{ recordLabel(field.relation, option) }} · №{{ option.id }}
-                </option></template
-              >
-              <template v-else
-                ><option
-                  v-for="option in field.options"
-                  :key="option.value"
-                  :value="option.value"
-                >
-                  {{ option.label }}
-                </option></template
-              >
-            </select>
+              :disabled="busy || !!(field.relation && referenceErrors[field.relation])"
+              :options="field.relation ? [...(field.optional ? [{value:'',label:'Не указан'}] : []), ...(references[field.relation] ?? []).map(option => ({ value: String(option.id), label: `${recordLabel(field.relation!, option)} · №${option.id}` }))] : (field.options ?? [])"
+            />
             <input
               v-else
               :id="`admin-${field.key}`"
@@ -567,7 +546,7 @@ async function remove() {
               "
               :autocomplete="field.type === 'password' ? 'new-password' : 'off'"
               class="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm focus:ring-2 focus:ring-ring disabled:opacity-50"
-              :disabled="busy"
+              :disabled="busy || (editing && field.immutable)"
               :required="
                 !field.optional && !(field.type === 'password' && editing)
               "
@@ -757,6 +736,7 @@ async function remove() {
                     type="button"
                     class="rounded-md px-2 py-1.5 text-xs text-destructive disabled:opacity-50"
                     :disabled="busy || detailLoading !== null"
+                    v-if="resource.deletable !== false"
                     :aria-label="`Удалить ${resource.singular} №${row.id}`"
                     @click="askDelete(row, $event)"
                   >

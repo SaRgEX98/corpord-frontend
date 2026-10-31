@@ -31,6 +31,12 @@
   --background: #f5f6f8;
   --foreground: #172538;
   --card: #fff;
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  --accent: var(--muted);
+  --accent-foreground: var(--foreground);
+  --input: var(--border);
+  --ring: var(--primary);
   --muted: #edf1f6;
   --muted-foreground: #637185;
   --primary: #245ce3;
@@ -332,3 +338,5 @@
     scroll-behavior: auto !important;
   }
 }
+
+select option, select optgroup { background: var(--card); color: var(--foreground); }

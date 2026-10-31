@@ -16,6 +16,7 @@ const forwardedProps = useForwardProps(delegatedProps)
 
 <template>
   <CalendarNext
+    aria-label="Следующий месяц"
     data-slot="calendar-next-button"
     :class="cn(
       buttonVariants({ variant: 'outline' }),

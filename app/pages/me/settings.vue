@@ -1,16 +1,17 @@
 <script setup lang="ts">
 import { ArrowLeft, Palette, ShieldCheck, LogOut } from "lucide-vue-next";
+import { AlertDialogRoot, AlertDialogTrigger, AlertDialogPortal, AlertDialogOverlay, AlertDialogContent, AlertDialogTitle, AlertDialogDescription, AlertDialogCancel } from "reka-ui";
 import { useAuthStore } from "~/store/auth";
 import { apiErrorMessage } from "~/utils/api-errors";
 definePageMeta({ layout: "me" });
 useHead({ title: "Настройки" });
 const auth = useAuthStore();
-const dialog = ref<HTMLDialogElement | null>(null);
+const dialogOpen = ref(false);
 const loading = ref(false);
 const error = ref("");
 function confirmRevoke() {
   error.value = "";
-  dialog.value?.showModal();
+  dialogOpen.value = true;
 }
 async function revokeAll() {
   if (loading.value) return;
@@ -18,7 +19,7 @@ async function revokeAll() {
   error.value = "";
   try {
     await auth.logoutAll();
-    dialog.value?.close();
+    dialogOpen.value = false;
     await navigateTo("/login");
   } catch (cause) {
     error.value = apiErrorMessage(cause);
@@ -28,6 +29,7 @@ async function revokeAll() {
 }
 </script>
 <template>
+  <AlertDialogRoot :open="dialogOpen" @update:open="!loading && (dialogOpen = $event)">
   <div class="container-page">
     <NuxtLink to="/me/profile" class="back-link"
       ><ArrowLeft :size="15" />Личный кабинет</NuxtLink
@@ -61,34 +63,30 @@ async function revokeAll() {
             <p>Завершите сеансы на всех устройствах, включая текущее.</p>
           </div>
         </div>
-        <button class="btn btn-secondary" @click="confirmRevoke">
+        <AlertDialogTrigger as-child><button class="btn btn-secondary" @click="confirmRevoke">
           <LogOut :size="15" />Выйти на всех устройствах
-        </button>
+        </button></AlertDialogTrigger>
         <p class="settings-note">
           Для продолжения работы потребуется войти снова.
         </p>
       </section>
     </div>
-    <dialog
-      ref="dialog"
-      class="revoke-dialog"
-      aria-labelledby="revoke-title"
-      @cancel="loading && $event.preventDefault()"
-    >
-      <h2 id="revoke-title">Завершить все сеансы?</h2>
-      <p>
+    <AlertDialogPortal>
+    <AlertDialogOverlay class="revoke-overlay" />
+    <AlertDialogContent class="revoke-dialog" @escape-key-down="loading && $event.preventDefault()">
+      <AlertDialogTitle as="h2">Завершить все сеансы?</AlertDialogTitle>
+      <AlertDialogDescription as="p">
         Вы выйдете из аккаунта на всех устройствах, включая это. После этого
         можно будет войти снова.
-      </p>
+      </AlertDialogDescription>
       <div v-if="error" class="form-error" role="alert">{{ error }}</div>
       <div class="dialog-actions">
-        <button
+        <AlertDialogCancel
           class="btn btn-secondary"
           :disabled="loading"
-          autofocus
-          @click="dialog?.close()"
+
         >
-          Отмена</button
+          Отмена</AlertDialogCancel
         ><button
           class="btn btn-danger"
           :disabled="loading"
@@ -98,8 +96,10 @@ async function revokeAll() {
           {{ loading ? "Завершаем…" : "Завершить сеансы" }}
         </button>
       </div>
-    </dialog>
+    </AlertDialogContent>
+    </AlertDialogPortal>
   </div>
+  </AlertDialogRoot>
 </template>
 <style scoped>
 .settings-stack {
@@ -132,6 +132,13 @@ async function revokeAll() {
   line-height: 1.7;
 }
 .revoke-dialog {
+  position: fixed;
+  z-index: 101;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  max-height: calc(100dvh - 36px);
+  overflow-y: auto;
   border: 1px solid var(--border);
   border-radius: 17px;
   padding: 28px;
@@ -141,7 +148,10 @@ async function revokeAll() {
   color: var(--foreground);
   box-shadow: 0 25px 100px #0003;
 }
-.revoke-dialog::backdrop {
+.revoke-overlay {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
   background: #07142699;
   backdrop-filter: blur(3px);
 }
