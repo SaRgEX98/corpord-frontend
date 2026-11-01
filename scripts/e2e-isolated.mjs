@@ -22,10 +22,24 @@ const web = `http://127.0.0.1:${webPort}`;
 const email = `admin-${prefix}@example.test`;
 const password = randomBytes(20).toString("hex");
 const postgresPassword = randomBytes(20).toString("hex");
+const photonContainer = process.env.CORPORD_E2E_PHOTON_CONTAINER || "";
+function pilotStyle(key) {
+  const value = process.env[key] || "";
+  if (!value) return "";
+  const url = new URL(value);
+  if (!["http:", "https:"].includes(url.protocol) ||
+      !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname) ||
+      url.username || url.password || url.hash)
+    throw new Error(`${key} must point to a local pilot style`);
+  return url.toString();
+}
+const mapStyle = pilotStyle("CORPORD_E2E_MAP_STYLE_URL");
+const mapDarkStyle = pilotStyle("CORPORD_E2E_MAP_DARK_STYLE_URL");
 const containers = [];
 let frontend;
 let testProcess;
 let networkCreated = false;
+let photonConnected = false;
 let interrupted = 0;
 let cleanupPromise;
 // Keep shell/tool configuration, but never inherit application runtime configuration.
@@ -66,6 +80,9 @@ function cleanup() {
       try {
         docker("rm", "-f", id);
       } catch {}
+    }
+    if (photonConnected) {
+      try { docker("network", "disconnect", prefix, photonContainer); } catch {}
     }
     if (networkCreated) {
       try {
@@ -119,6 +136,13 @@ try {
   if (interrupted) throw new Error("Test interrupted");
   docker("network", "create", prefix);
   networkCreated = true;
+  if (photonContainer) {
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$/.test(photonContainer) ||
+        docker("inspect", "--format", '{{ index .Config.Labels "corpord.geo.pilot" }}', photonContainer) !== "true")
+      throw new Error("Photon must be an explicitly labelled disposable geo pilot container");
+    docker("network", "connect", prefix, photonContainer);
+    photonConnected = true;
+  }
   runContainer("postgres", [
     "-e",
     `POSTGRES_PASSWORD=${postgresPassword}`,
@@ -150,6 +174,7 @@ try {
       ALLOWED_ORIGINS: web,
       SSO_GOOGLE_ENABLED: "false",
       SSO_YANDEX_ENABLED: "false",
+      ...(photonContainer ? { PHOTON_BASE_URL: `http://${photonContainer}:2322` } : {}),
     })
       .map(([key, value]) => `${key}=${value}`)
       .join("\n") + "\n",
@@ -235,6 +260,8 @@ try {
     env: {
       ...childEnv,
       NUXT_PUBLIC_API_BASE: api,
+      NUXT_PUBLIC_MAP_STYLE_URL: mapStyle,
+      NUXT_PUBLIC_MAP_DARK_STYLE_URL: mapDarkStyle,
       NITRO_PORT: webPort,
       NITRO_HOST: "127.0.0.1",
     },
