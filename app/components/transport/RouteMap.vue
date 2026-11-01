@@ -25,16 +25,18 @@ async function open() {
   activated.value = true; failure.value = '';
   await nextTick();
   try {
-    const [maplibre, {Protocol}] = await Promise.all([import('maplibre-gl'), import('pmtiles')]);
+    const [maplibre, {Protocol}, {default: workerUrl}] = await Promise.all([import('maplibre-gl'), import('pmtiles'), import('maplibre-gl/dist/maplibre-gl-worker.mjs?url')]);
     await import('maplibre-gl/dist/maplibre-gl.css');
     if (!host.value || run !== generation || !points.value.length) return;
+    // Vite must emit MapLibre 6's module worker instead of resolving a missing relative URL.
+    maplibre.setWorkerUrl(workerUrl);
     // Shared protocol supports multiple maps without one unmount breaking another.
     if (!protocolRegistered) { maplibre.addProtocol('pmtiles', new Protocol().tile); protocolRegistered = true; }
     const currentMap = new maplibre.Map({container:host.value,style:style.value,center:[points.value[0]!.longitude!,points.value[0]!.latitude!],zoom:9,attributionControl:{compact:false}});
     map = currentMap;
     currentMap.addControl(new maplibre.NavigationControl());
     currentMap.on('error', () => { failure.value = 'Карта временно недоступна. Названия и координаты доступны ниже.'; });
-    for (const point of points.value) new maplibre.Marker().setLngLat([point.longitude!,point.latitude!]).setPopup(new maplibre.Popup().setText(point.name)).addTo(currentMap);
+    for (const point of points.value) new maplibre.Marker({color:'var(--primary)'}).setLngLat([point.longitude!,point.latitude!]).setPopup(new maplibre.Popup().setText(point.name)).addTo(currentMap);
     if (points.value.length > 1) {
       const bounds = new maplibre.LngLatBounds();
       for (const point of points.value) bounds.extend([point.longitude!,point.latitude!]);
