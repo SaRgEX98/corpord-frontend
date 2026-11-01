@@ -6,6 +6,13 @@ test('real local OSM archive renders Cyrillic labels in both themes without publ
   const unexpected: string[] = [];
   const successful: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
+  const mapOrigin = new URL(process.env.CORPORD_E2E_MAP_STYLE_URL!).origin;
+  page.on('response', response => {
+    if (new URL(response.url()).origin === mapOrigin && !response.ok()) errors.push(`Map HTTP ${response.status()}: ${response.url()}`);
+  });
+  page.on('requestfailed', request => {
+    if (new URL(request.url()).origin === mapOrigin) errors.push(`Map request failed: ${request.url()}`);
+  });
   page.on('request', request => {
     const url = new URL(request.url());
     if (['http:', 'https:'].includes(url.protocol) && !['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname)) unexpected.push(request.url());
@@ -38,9 +45,13 @@ test('real local OSM archive renders Cyrillic labels in both themes without publ
   await page.evaluate(()=>document.documentElement.classList.add('dark'));
   await expect.poll(()=>successful.some(url=>url.includes('/styles/corpord-dark.json'))).toBeTruthy();
   await page.waitForLoadState('networkidle');
+  await expect(canvas).toBeVisible();
+  await expect(page.getByText('Карта временно недоступна.',{exact:false})).toHaveCount(0);
   await canvas.screenshot({path:'test-results/real-map-dark.png'});
   await page.setViewportSize({width:390,height:844});
   await expect(canvas).toBeVisible();
+  await page.waitForLoadState('networkidle');
+  await expect(page.getByText('Карта временно недоступна.',{exact:false})).toHaveCount(0);
   await canvas.screenshot({path:'test-results/real-map-mobile.png'});
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
   expect(errors).toEqual([]);
