@@ -3,9 +3,11 @@ import { test, expect } from '@playwright/test';
 test('real self-hosted Photon result maps explicitly to an internal test stop', async ({page,request}) => {
   test.skip(!process.env.CORPORD_E2E_GEO_PILOT, 'Requires the labelled local Photon pilot and disposable backend stack.');
   const api = process.env.CORPORD_E2E_API_URL!;
+  const invalid = await request.get(`${api}/geo/suggest?q=Екатеринбург&limit=0`);
+  expect(invalid.status()).toBe(400);
   let place: {label:string;city:string;latitude:number;longitude:number} | undefined;
   let query = '';
-  for (const candidate of ['улица Соболева 3','Екатеринбург','8 Марта','Белинского','Южный']) {
+  for (const candidate of ['Северный автовокзал','улица Соболева 3','Екатеринбург','8 Марта','Белинского','Южный']) {
     const response = await request.get(`${api}/geo/suggest?${new URLSearchParams({q:candidate,limit:'5'})}`);
     expect(response.ok(), `real Photon adapter status ${response.status()}`).toBeTruthy();
     const items = (await response.json()).items;
