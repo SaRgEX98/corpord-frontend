@@ -29,7 +29,7 @@ const {
   pending,
   error,
   refresh,
-} = await useAsyncData(
+} = useLazyAsyncData(
   () => `public-trip-${id.value}`,
   () => api.trips.get(id.value),
 );
@@ -64,7 +64,7 @@ const errorMessage = computed(() =>
               sortedStops[sortedStops.length - 1]?.stop.name || `№ ${trip.id}`
             }}
           </h1>
-          <p class="page-description">
+          <p v-if="trip.is_demo" class="badge mb-3">Демонстрационное расписание · тестовая цена</p><p class="page-description">
             Рейс № {{ trip.id }} · {{ stopDate(trip.start_time, sortedStops[0]?.stop) }} ·
             {{ displayDuration(trip.start_time, trip.end_time) }}
           </p>

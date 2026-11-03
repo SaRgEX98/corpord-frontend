@@ -4,28 +4,15 @@ import type { ResourceKey } from "~/features/admin/resources";
 import { apiErrorMessage } from "~/utils/api-errors";
 definePageMeta({ layout: "admin", middleware: ["admin"] });
 useHead({ title: "Управление перевозками" });
-const transport = useTransportApi();
-const counts = ref<Partial<Record<ResourceKey, number>>>({});
-const errors = ref<Partial<Record<ResourceKey, string>>>({});
-const loading = ref(true);
-async function load() {
-  if (!loading.value) loading.value = true;
-  await Promise.all(
-    adminResources.map(async (resource) => {
-      try {
-        const rows =
-          resource.key === "trips"
-            ? await transport.trips.all()
-            : await transport[resource.key].list();
-        counts.value[resource.key] = rows.length;
-        delete errors.value[resource.key];
-      } catch (cause) {
-        errors.value[resource.key] = apiErrorMessage(cause);
-        delete counts.value[resource.key];
-      }
-    }),
-  );
-  loading.value = false;
+const http=useNuxtApp().$api;
+const counts=ref<Record<string,{value:number|null;approximate:boolean}>>({});
+const error=ref('');
+const loading=ref(true);
+async function load(){
+ loading.value=true;error.value='';
+ try{counts.value=await http('/admin/catalog-counts');}
+ catch(cause){error.value=apiErrorMessage(cause);}
+ finally{loading.value=false;}
 }
 onMounted(load);
 </script>
@@ -73,14 +60,14 @@ onMounted(load);
           >
         </div>
         <p class="mt-3 text-3xl font-semibold tabular-nums">
-          {{ loading ? "…" : (counts[resource.key] ?? "—") }}
+          {{ loading ? "…" : (counts[resource.key]?.value == null ? "—" : `≈ ${counts[resource.key]!.value!.toLocaleString('ru')}`) }}
         </p>
         <p
-          v-if="errors[resource.key]"
+          v-if="error"
           class="mt-2 text-xs text-destructive"
           role="status"
         >
-          {{ errors[resource.key] }}
+          {{ error }}
         </p>
         <p class="mt-3 text-sm text-muted-foreground">
           {{ resource.description }}

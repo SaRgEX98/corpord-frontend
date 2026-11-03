@@ -8,6 +8,8 @@ const routesApi = createRoutesApi(api);
 const emit = defineEmits<{origin:[value:LocationSuggestion];destination:[value:LocationSuggestion]}>();
 const cities = ref<LocationSuggestion[]>([]);
 const stops = ref<LocationSuggestion[]>([]);
+const stopCursor=ref<string|null>(null);
+const mappedCity=ref<LocationSuggestion|null>(null);
 const selected = ref<Place>();
 const mappingPending = ref(false);
 const mappingError = ref('');
@@ -15,16 +17,24 @@ let mappingGeneration = 0;
 watch(selected, async value => {
   if (value) term.value = value.label;
   const run = ++mappingGeneration;
-  cities.value = []; stops.value = []; mappingError.value = ''; mappingPending.value = false;
+  cities.value = []; stops.value = []; stopCursor.value=null;mappedCity.value=null; mappingError.value = ''; mappingPending.value = false;
   if (!value?.city) return;
   mappingPending.value = true;
   try { const result = await routesApi.suggest(value.city); if (run === mappingGeneration) cities.value = result.items.filter(item => item.type === 'city'); }
   catch { if (run === mappingGeneration) mappingError.value = 'Не удалось загрузить города. Выберите остановку в полях выше.'; }
   finally { if (run === mappingGeneration) mappingPending.value = false; }
 });
-async function chooseCity(city: LocationSuggestion) {
-  const run = ++mappingGeneration; stops.value = []; mappingPending.value = true; mappingError.value = '';
-  try { const result = await routesApi.stops(city.id); if (run === mappingGeneration) stops.value = result.items; }
+async function chooseCity(city: LocationSuggestion,append=false) {
+  if(append && (mappingPending.value || !stopCursor.value))return;
+  mappedCity.value=city;
+  const run = ++mappingGeneration; if(!append){stops.value=[];stopCursor.value=null;} mappingPending.value = true; mappingError.value = '';
+  try {
+    const result=await routesApi.stopPage(Number(city.id.split(':')[1]),'',append ? stopCursor.value??undefined:undefined);
+    if(run===mappingGeneration){
+      const page=result.items.map(s=>({id:`stop:${s.id}`,type:'stop' as const,name:s.name,address:s.address,region:city.region,timezone:s.effective_timezone,served:false,rank_reason:'match' as const,latitude:s.latitude,longitude:s.longitude}));
+      stops.value=(append?[...stops.value,...page]:page).slice(-100);stopCursor.value=result.next_cursor;
+    }
+  }
   catch { if (run === mappingGeneration) mappingError.value = 'Не удалось загрузить остановки. Выберите остановку в полях выше.'; }
   finally { if (run === mappingGeneration) mappingPending.value = false; }
 }
@@ -59,7 +69,8 @@ onBeforeUnmount(() => { mappingGeneration++; generation++; clearTimeout(timer); 
     <p v-if="mappingError" role="status" class="form-hint mt-2">{{ mappingError }}</p>
     <div v-if="selected && cities.length" class="mt-3"><p class="form-hint">Уточните город, затем выберите остановку:</p><button v-for="city in cities" :key="city.id" type="button" class="btn btn-secondary mt-2 mr-2" @click="chooseCity(city)">{{ city.name }} · {{ city.region }}</button></div>
     <ul v-if="stops.length" class="mt-3 grid gap-2"><li v-for="stop in stops" :key="stop.id" class="rounded-lg border p-3"><strong>{{ stop.name }}</strong><p class="form-hint">{{ stop.address }}</p><button type="button" class="btn btn-secondary mt-2 mr-2" @click="emit('origin',stop)">Отсюда</button><button type="button" class="btn btn-secondary mt-2" @click="emit('destination',stop)">Сюда</button></li></ul>
-    <TransportRouteMap v-if="selected" :points="[{name:selected.label,latitude:selected.latitude,longitude:selected.longitude}]" />
+    <button v-if="stopCursor && mappedCity" type="button" class="btn btn-secondary mt-3" :disabled="mappingPending" @click="chooseCity(mappedCity,true)">Показать ещё остановки</button>
+    <LazyTransportRouteMap v-if="selected" :points="[{name:selected.label,latitude:selected.latitude,longitude:selected.longitude}]" />
     <p class="form-hint mt-2">Геоданные © участники OpenStreetMap · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener" class="text-link">ODbL</a></p>
   </details>
 </template>

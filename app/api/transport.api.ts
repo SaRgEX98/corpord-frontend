@@ -22,6 +22,7 @@ import type {
 } from "../types/domain/transport";
 
 export interface ApiRequestOptions {
+  signal?: AbortSignal;
   method?: "GET" | "POST" | "PUT" | "DELETE";
   retry?: number;
   sessionVersion?: number;
@@ -48,6 +49,7 @@ function resource<
     async list(): Promise<Read[]> {
       return (await api<Read[] | null>(readPath)) ?? [];
     },
+    page: (q = '', cursor?: string, signal?: AbortSignal, filters: {status?:string;category?:string}={}) => api<{items: Read[]; next_cursor: string | null}>(`${catalogKind(readPath)==='users' ? '/admin/catalog/users' : '/catalog/'+catalogKind(readPath)}?${new URLSearchParams({q,limit:'30',...filters,...(cursor ? {cursor} : {})})}`, {signal}),
     get: (id: number) => api<Read>(item(readPath, id)),
     create: (body: Input) => api<Created>(writePath, { method: "POST", body }),
     update: (id: number, body: Update) =>
@@ -55,6 +57,10 @@ function resource<
     remove: (id: number) =>
       api<void>(item(writePath, id), { method: "DELETE" }),
   };
+}
+
+function catalogKind(path: string): string {
+  return ({'/bus/':'buses','/driver/':'drivers','/stops/':'stops','/trips/':'trips','/trip_stops/':'tripStops','/bus/categories/':'busCategories','/bus/statuses/':'busStatuses','/driver/status/':'driverStatuses','/admin/users':'users','/users':'users'} as Record<string,string>)[path] ?? '';
 }
 
 export function createTransportApi(api: ApiClient) {
@@ -68,11 +74,10 @@ export function createTransportApi(api: ApiClient) {
   });
   return {
     cities: {
+      page: (q = '', cursor?: string, signal?: AbortSignal) => api<{items: City[]; next_cursor: string | null}>(`/catalog/cities?${new URLSearchParams({q,limit:'30',...(cursor ? {cursor} : {})})}`, {signal}),
       list: async () => (await api<{items: City[]} | null>("/admin/cities"))?.items ?? [],
       get: async (id: number) => {
-        const item = (await api<{items: City[]}>("/admin/cities")).items.find(city => city.id === id);
-        if (!item) throw new Error("Город не найден");
-        return item;
+        return api<City>(`/admin/cities/${id}`);
       },
       create: (body: CityInput) => api<City>("/admin/cities", {method:"POST",body}),
       update: (id: number, body: CityInput) => api<City>(`/admin/cities/${id}`, {method:"PUT",body}),
