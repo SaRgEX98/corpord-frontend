@@ -1,6 +1,8 @@
 <template>
   <footer class="page-footer">
-    <span>Corpord — автобусы, маршруты, поездки.</span>
+    <span>Corpord — автобусы, маршруты, поездки.<br />
+      Города и остановки: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">участники OpenStreetMap</a> · ODbL
+    </span>
     <div>
       <NuxtLink to="/stops">Остановки</NuxtLink
       ><NuxtLink to="/buses">Автопарк</NuxtLink><ThemePicker compact />

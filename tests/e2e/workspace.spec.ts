@@ -114,8 +114,13 @@ test("all nine resources support create, detail, update and delete against the r
       if (await input.evaluate((element) => element.tagName === "SELECT"))
         await input.selectOption(value);
       else if (await input.getAttribute("role") === "combobox") {
-        await input.click();
-        await page.locator(`[role="option"][data-value="${value}"]`).click();
+        if(await input.evaluate(element=>element.tagName==='INPUT')){
+          await input.fill(value);
+          await page.getByRole('option').filter({hasText:new RegExp(`№${value}$`)}).first().click();
+        }else{
+          await input.click();
+          await page.locator(`[role="option"][data-value="${value}"]`).click();
+        }
       } else await input.fill(value);
     }
     await page.getByRole("button", { name: "Сохранить", exact: true }).click();

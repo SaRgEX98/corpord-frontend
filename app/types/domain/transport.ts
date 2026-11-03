@@ -92,6 +92,7 @@ export interface CreatedTrip extends TripInput {
   updated_at: string;
 }
 export interface Trip {
+  is_demo?: boolean;
   id: number;
   bus: Bus;
   driver: Driver;

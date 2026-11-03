@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onMounted, ref, computed } from "vue";
+import { nextTick, onMounted, onBeforeUnmount, watch, ref, computed } from "vue";
 import { apiErrorMessage } from "~/utils/api-errors";
 import {
   buildAdminPayload,
@@ -18,6 +18,7 @@ const props = defineProps<{ resource: ResourceDefinition }>();
 // Each metadata entry is paired with its backend resource; runtime validation builds its writable fields.
 interface ResourceApi {
   list: () => Promise<AdminRecord[]>;
+  page: (q?:string,cursor?:string,signal?:AbortSignal) => Promise<{items:AdminRecord[];next_cursor:string|null}>;
   get: (id: number) => Promise<AdminRecord>;
   create: (input: Record<string, unknown>) => Promise<unknown>;
   update: (id: number, input: Record<string, unknown>) => Promise<unknown>;
@@ -25,13 +26,13 @@ interface ResourceApi {
 }
 const transport = useTransportApi();
 const service = (key: ResourceKey) => transport[key] as unknown as ResourceApi;
-const listResource = async (key: ResourceKey): Promise<AdminRecord[]> =>
-  key === "trips"
-    ? ((await transport.trips.all()) as unknown as AdminRecord[])
-    : await service(key).list();
 const rows = ref<AdminRecord[]>([]);
 const references = ref<Partial<Record<ResourceKey, AdminRecord[]>>>({});
 const loading = ref(true);
+const nextCursor=ref<string|null>(null);
+let listGeneration=0;
+let listController:AbortController|undefined;
+let listTimer:ReturnType<typeof setTimeout>|undefined;
 const error = ref("");
 const success = ref("");
 const referenceErrors = ref<Partial<Record<ResourceKey, string>>>({});
@@ -61,20 +62,7 @@ const editing = computed(() => editor.value === "edit");
 const timezone = computed(
   () => Intl.DateTimeFormat().resolvedOptions().timeZone,
 );
-const visibleRows = computed(() => {
-  const search = query.value.trim().toLocaleLowerCase("ru");
-  return search
-    ? rows.value.filter((row) =>
-        [
-          String(row.id),
-          ...props.resource.columns.map((column) => display(row, column.key)),
-        ]
-          .join(" ")
-          .toLocaleLowerCase("ru")
-          .includes(search),
-      )
-    : rows.value;
-});
+const visibleRows = computed(() => rows.value);
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object"
@@ -87,6 +75,7 @@ function fullName(row: Record<string, unknown>) {
     .join(" ");
 }
 function routeName(row: Record<string, unknown>) {
+  if(typeof row.route === "string")return row.route;
   const stops = Array.isArray(row.stops) ? row.stops : [];
   const first = asRecord(asRecord(stops[0]).stop).name;
   const last = asRecord(asRecord(stops[stops.length - 1]).stop).name;
@@ -158,33 +147,38 @@ function display(row: Record<string, unknown>, key: string): string {
     : String(row[key]);
 }
 
-async function loadReferences() {
-  await Promise.all(
-    relations.value.map(async (key) => {
-      try {
-        references.value[key] = await listResource(key);
-        delete referenceErrors.value[key];
-      } catch (cause) {
-        referenceErrors.value[key] = apiErrorMessage(cause);
-      }
-    }),
-  );
+// Load only selected relations when the editor opens. Other choices are
+// searched remotely by RelationPicker; the catalog itself fetches no references.
+async function loadReferences(row?:AdminRecord) {
+  references.value={}; referenceErrors.value={};
+  if(!row)return;
+  await Promise.all(props.resource.fields.filter(f=>f.relation).map(async field=>{
+    const key=field.relation!;
+    try {
+      const resolved=resolveRelationID(field,row,{});
+      if(resolved){ references.value[key]=[await service(key).get(Number(resolved))]; return; }
+      const label=field.key==='category_id' ? row.category : field.key==='status_id' ? row.status : row[field.key];
+      if(typeof label==='string' && label){const page=await service(key).page(label); references.value[key]=page.items;}
+    }catch(cause){referenceErrors.value[key]=apiErrorMessage(cause);}
+  }));
 }
-async function load() {
-  loading.value = true;
-  error.value = "";
+function selectReference(key:ResourceKey,row:AdminRecord){references.value[key]=[row];delete referenceErrors.value[key];}
+async function load(append=false) {
+  if(append && (loading.value || !nextCursor.value))return;
+  const run=++listGeneration;listController?.abort();listController=new AbortController();
+  loading.value=true;error.value='';
+  if(!append){rows.value=[];nextCursor.value=null;}
   try {
-    rows.value = await listResource(props.resource.key);
-  } catch (cause) {
-    error.value = apiErrorMessage(cause);
-  } finally {
-    loading.value = false;
-  }
+    const page=await service(props.resource.key).page(query.value,append?nextCursor.value??undefined:undefined,listController.signal);
+    if(run!==listGeneration)return;
+    rows.value=(append?[...rows.value,...page.items]:page.items).slice(-200);nextCursor.value=page.next_cursor;
+  }catch(cause){if(run===listGeneration && !listController.signal.aborted)error.value=apiErrorMessage(cause);}
+  finally{if(run===listGeneration)loading.value=false;}
 }
-async function refresh() {
-  await Promise.all([load(), loadReferences()]);
-}
+async function refresh(){await load();}
+watch(query,()=>{listGeneration++;listController?.abort();clearTimeout(listTimer);rows.value=[];nextCursor.value=null;listTimer=setTimeout(()=>load(),250);});
 onMounted(refresh);
+onBeforeUnmount(()=>{listGeneration++;listController?.abort();clearTimeout(listTimer);});
 
 function prepareValues(row?: AdminRecord) {
   const result: Record<string, string> = {};
@@ -212,6 +206,7 @@ async function focusPanel() {
 async function startCreate(event: MouseEvent) {
   actionTrigger = event.currentTarget as HTMLElement;
   current.value = null;
+  await loadReferences();
   prepareValues();
   editor.value = "create";
   formError.value = "";
@@ -233,6 +228,7 @@ async function openRow(
   success.value = "";
   try {
     current.value = await service(props.resource.key).get(row.id);
+    if(mode === "edit") await loadReferences(current.value);
     prepareValues(current.value);
     editor.value = mode;
     await focusPanel();
@@ -521,15 +517,16 @@ async function remove() {
                 >(необязательно)</span
               ></label
             >
+            <AdminRelationPicker v-if="field.relation" :id="`admin-${field.key}`" v-model="values[field.key]" :kind="field.relation" :label="field.label" :disabled="busy" :invalid="!!validation[field.key]" :optional="field.optional" :selected-label="references[field.relation]?.find(r=>String(r.id)===values[field.key]) ? recordLabel(field.relation,references[field.relation]!.find(r=>String(r.id)===values[field.key])!) : undefined" @selected="selectReference(field.relation!,$event)" />
             <UiTokenSelect
-              v-if="field.type === 'select'"
+              v-else-if="field.type === 'select'"
               :id="`admin-${field.key}`"
               v-model="values[field.key]"
               :label="field.label"
               :invalid="!!validation[field.key]"
               :aria-describedby="`help-${field.key}`"
               :disabled="busy || !!(field.relation && referenceErrors[field.relation])"
-              :options="field.relation ? [...(field.optional ? [{value:'',label:'Не указан'}] : []), ...(references[field.relation] ?? []).map(option => ({ value: String(option.id), label: `${recordLabel(field.relation!, option)} · №${option.id}` }))] : (field.options ?? [])"
+              :options="field.options ?? []"
             />
             <input
               v-else
@@ -573,7 +570,7 @@ async function remove() {
                     type="button"
                     class="underline"
                     :disabled="busy"
-                    @click="loadReferences"
+                    @click="loadReferences(current ?? undefined)"
                   >
                     Повторить
                   </button>
@@ -794,5 +791,6 @@ async function remove() {
         </button>
       </div>
     </dialog>
+    <button v-if="nextCursor" class="btn btn-secondary mt-4" :disabled="loading" @click="load(true)">Показать ещё</button>
   </section>
 </template>

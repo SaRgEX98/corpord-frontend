@@ -18,7 +18,7 @@ const {
   pending,
   error,
   refresh,
-} = await useAsyncData(
+} = useLazyAsyncData(
   () => `public-${props.kind}-${id.value}`,
   async (): Promise<Bus | Driver | Stop> => {
     if (props.kind === "buses") return api.buses.get(id.value);

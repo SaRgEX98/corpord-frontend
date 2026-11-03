@@ -8,7 +8,7 @@ import {
   SlidersHorizontal,
 } from "lucide-vue-next";
 import type { Bus, Driver, Stop } from "~/types/domain/transport";
-import { apiErrorMessage } from "~/utils/api-errors";
+
 const props = defineProps<{ kind: "buses" | "drivers" | "stops" }>();
 const api = useTransportApi();
 const settings = {
@@ -38,23 +38,12 @@ const settings = {
   },
 };
 const config = computed(() => settings[props.kind]);
-const {
-  data: records,
-  pending,
-  error,
-  refresh,
-} = await useAsyncData(
-  `public-${props.kind}`,
-  async (): Promise<(Bus | Driver | Stop)[]> => {
-    if (props.kind === "buses") return api.buses.list();
-    if (props.kind === "drivers") return api.drivers.list();
-    return api.stops.list();
-  },
-  { default: () => [] },
-);
-const query = ref("");
 const status = ref("");
 const category = ref("");
+const {items: records, query, pending, error, refresh, nextCursor, loadMore} = usePagedCatalog<Bus | Driver | Stop>(
+  (q,cursor,signal) => api[props.kind].page(q,cursor,signal,{status:status.value,category:category.value}),
+  [status,category],
+);
 function title(record: Bus | Driver | Stop) {
   if ("brand" in record) return record.brand;
   if ("first_name" in record)
@@ -64,37 +53,21 @@ function title(record: Bus | Driver | Stop) {
 function recordStatus(record: Bus | Driver | Stop) {
   return "status" in record ? record.status : "";
 }
-const statuses = computed(() => [
-  ...new Set(records.value.map(recordStatus).filter(Boolean)),
-]);
-const categories = computed(() => [
-  ...new Set(
-    records.value
-      .flatMap((r) => ("brand" in r ? [r.category] : []))
-      .filter(Boolean),
-  ),
-]);
-const filtered = computed(() =>
-  records.value.filter((record) => {
-    const haystack = [
-      title(record),
-      "license_plate" in record ? record.license_plate : "",
-      "address" in record ? record.address : "",
-      "phone_number" in record ? record.phone_number : "",
-    ]
-      .join(" ")
-      .toLocaleLowerCase("ru");
-    return (
-      (!query.value ||
-        haystack.includes(query.value.trim().toLocaleLowerCase("ru"))) &&
-      (!status.value || recordStatus(record) === status.value) &&
-      (!category.value ||
-        ("category" in record && record.category === category.value))
-    );
-  }),
-);
+const statuses=ref<string[]>([]);
+const categories=ref<string[]>([]);
+onMounted(async()=>{
+  if(props.kind==='stops')return;
+  const statusApi=props.kind==='buses' ? api.busStatuses : api.driverStatuses;
+  const [statusPage,categoryPage]=await Promise.all([
+    statusApi.page().catch(()=>({items:[]})),
+    props.kind==='buses' ? api.busCategories.page().catch(()=>({items:[]})) : Promise.resolve({items:[]}),
+  ]);
+  statuses.value=statusPage.items.map(item=>item.name);
+  categories.value=categoryPage.items.map(item=>item.name);
+});
+const filtered=records;
 const errorMessage = computed(() =>
-  error.value ? apiErrorMessage(error.value) : null,
+  error.value || null,
 );
 useHead({ title: computed(() => config.value.title) });
 </script>
@@ -126,7 +99,7 @@ useHead({ title: computed(() => config.value.title) });
       <UiTokenSelect v-if="statuses.length" v-model="status" class="toolbar-select" label="Статус" :options="[{ value: '', label: 'Все статусы' }, ...statuses.map(item => ({ value: item, label: item }))]" />
     </div>
     <p v-if="!pending && !error" class="result-count">
-      Найдено: {{ filtered.length }}
+      Загружено: {{ records.length }}
     </p>
     <TransportDataState
       :pending="pending"
@@ -173,8 +146,8 @@ useHead({ title: computed(() => config.value.title) });
           ><p class="resource-subtitle stop-address">{{ record.address }}</p>
           <div class="resource-facts">
             <span
-              >{{ record.latitude.toFixed(4) }},
-              {{ record.longitude.toFixed(4) }}</span
+              >{{ record.latitude?.toFixed(4) }},
+              {{ record.longitude?.toFixed(4) }}</span
             >
           </div></template
         >
@@ -182,6 +155,7 @@ useHead({ title: computed(() => config.value.title) });
           <span>Подробнее</span><ArrowUpRight :size="16" /></div
       ></NuxtLink>
     </div>
+    <button v-if="nextCursor" class="btn btn-secondary mt-5" :disabled="pending" @click="loadMore">Показать ещё</button>
   </div>
 </template>
 <style scoped>

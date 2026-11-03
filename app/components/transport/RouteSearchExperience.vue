@@ -21,6 +21,8 @@ const error = ref('');
 const searched = ref(false);
 const nextCursor = ref<string | null>(null);
 let restoreGeneration = 0;
+let calendarController:AbortController|undefined;
+let searchController:AbortController|undefined;
 const restoring = ref(false);
 let calendarGeneration = 0;
 let searchGeneration = 0;
@@ -28,13 +30,14 @@ let writingQuery = false;
 const ready = computed(() => !!from.value && !!to.value && from.value.id !== to.value.id);
 const timezone = computed(() => calendar.value?.timezone || from.value?.timezone || '');
 const filters = (): RouteFilters => ({ from_id: from.value!.id, to_id: to.value!.id, date: date.value, passengers: 1, sort: sort.value });
-function invalidateSearch() { searchGeneration++; items.value = []; pending.value = false; searched.value = false; nextCursor.value = null; error.value = ''; }
+function invalidateSearch() { searchController?.abort();searchGeneration++; items.value = []; pending.value = false; searched.value = false; nextCursor.value = null; error.value = ''; }
 async function loadCalendar() {
   const run = ++calendarGeneration;
+  calendarController?.abort();calendarController=new AbortController();
   calendar.value = null; calendarError.value = ''; calendarPending.value = false;
   if (!ready.value) return;
   calendarPending.value = true;
-  try { const response = await api.calendar(filters(), month.value); if (run === calendarGeneration) calendar.value = response; }
+  try { const response = await api.calendar(filters(), month.value,calendarController.signal); if (run === calendarGeneration) calendar.value = response; }
   catch (cause) { if (run === calendarGeneration) calendarError.value = routeErrorMessage(cause, apiErrorMessage); }
   finally { if (run === calendarGeneration) calendarPending.value = false; }
 }
@@ -43,16 +46,18 @@ watch(month, () => { if (!restoring.value) loadCalendar(); });
 watch(sort, () => { if (searched.value) search(); });
 watch(date, () => { if (searched.value) invalidateSearch(); });
 async function search(append = false) {
+  if(append && (pending.value || !nextCursor.value))return;
   if (!ready.value) { error.value = 'Выберите разные города или остановки из подсказок.'; return; }
   if (!validRouteDate(date.value)) { error.value = 'Выберите дату отправления в календаре.'; return; }
   const run = ++searchGeneration;
+  searchController?.abort();searchController=new AbortController();
   pending.value = true; error.value = ''; searched.value = true;
   if (!append) items.value = [];
   const current = filters();
   try {
-    const response = await api.search(current, append ? nextCursor.value ?? undefined : undefined);
+    const response = await api.search(current, append ? nextCursor.value ?? undefined : undefined,searchController.signal);
     if (run !== searchGeneration) return;
-    items.value = append ? [...items.value, ...response.items] : response.items;
+    items.value = append ? [...items.value, ...response.items].slice(-200) : response.items;
     nextCursor.value = response.next_cursor;
     writingQuery = true;
     try { await router.replace({ query: { from_id: current.from_id, to_id: current.to_id, from_name: from.value?.name, to_name: to.value?.name, date: current.date, sort: current.sort } }); } finally { writingQuery = false; }
@@ -94,7 +99,7 @@ watch(() => route.query, q => {
   restore();
 });
 onMounted(restore);
-onBeforeUnmount(() => { restoreGeneration++; calendarGeneration++; searchGeneration++; });
+onBeforeUnmount(() => { restoreGeneration++; calendarGeneration++; searchGeneration++;calendarController?.abort();searchController?.abort(); });
 </script>
 <template>
   <form id="trip-search" class="panel mt-5 p-4" @submit.prevent="search()">
@@ -105,11 +110,11 @@ onBeforeUnmount(() => { restoreGeneration++; calendarGeneration++; searchGenerat
       <button class="btn btn-primary" type="submit" :disabled="pending"><Search :size="16" />Найти рейс</button>
     </div>
     <p class="form-hint mt-3">Выберите город или остановку из подсказок. Цена и расписание относятся к выбранному участку маршрута.</p>
-    <TransportPlaceSearch @origin="from = $event" @destination="to = $event" />
+    <LazyTransportPlaceSearch @origin="from = $event" @destination="to = $event" />
   </form>
   <div v-if="ready" class="mt-4 grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-    <TransportPriceCalendar :model-value="date" @update:model-value="chooseDate" :calendar="calendar" :pending="calendarPending" :error="calendarError" :timezone="timezone" @month="month = $event" @retry="loadCalendar" />
-    <div class="panel p-5"><p class="text-sm">{{ date ? `Выбрано: ${date.split('-').reverse().join('.')}` : 'Выберите день отправления в календаре.' }}</p><p class="form-hint mt-2">Цены рассчитываются сервером для одного пассажира. Свободные места уточняются; поиск не создаёт бронь.</p><TransportRouteMap :points="[from, to].filter((point): point is LocationSuggestion => !!point)" /></div>
+    <div><p v-if="calendar?.contains_demo" class="form-hint mb-2">В календаре есть демонстрационные рейсы и тестовые цены.</p><LazyTransportPriceCalendar :model-value="date" @update:model-value="chooseDate" :calendar="calendar" :pending="calendarPending" :error="calendarError" :timezone="timezone" @month="month = $event" @retry="loadCalendar" /></div>
+    <div class="panel p-5"><p class="text-sm">{{ date ? `Выбрано: ${date.split('-').reverse().join('.')}` : 'Выберите день отправления в календаре.' }}</p><p class="form-hint mt-2">Цены рассчитываются сервером для одного пассажира. Свободные места уточняются; поиск не создаёт бронь.</p><LazyTransportRouteMap :points="[from, to].filter((point): point is LocationSuggestion => !!point)" /></div>
   </div>
   <div class="my-6 flex flex-wrap items-center justify-between gap-3"><h2 class="section-label">Результаты поиска</h2><div class="w-52"><UiTokenSelect v-model="sort" label="Сортировка рейсов" :options="[{value:'departure',label:'По отправлению'},{value:'price',label:'По стоимости'}]" /></div></div>
   <p v-if="restoring" role="status" class="form-hint">Восстанавливаем выбранное направление…</p>
@@ -119,7 +124,7 @@ onBeforeUnmount(() => { restoreGeneration++; calendarGeneration++; searchGenerat
   <p v-if="searched && !pending && !error && !items.length" class="form-hint">Рейсы на выбранную дату не найдены. Попробуйте другой день или направление.</p>
   <div class="grid gap-3">
     <article v-for="item in items" :key="`${item.trip_id}:${item.boarding_stop_id}:${item.alighting_stop_id}`" class="panel p-5">
-      <div class="flex flex-wrap items-start justify-between gap-4"><div><span class="badge">Рейс № {{ item.trip_id }}</span><p class="mt-3 text-lg font-semibold">{{ item.boarding_name }} → {{ item.alighting_name }}</p><p class="mt-2 text-sm">{{ routeDate(item.departure_time, item.timezone).split('-').reverse().join('.') }} · {{ routeTime(item.departure_time, item.timezone) }} → {{ routeTime(item.arrival_time, item.arrival_timezone) }}</p><p class="form-hint">Отправление: {{ item.timezone }} · Прибытие: {{ item.arrival_timezone || "UTC (пояс остановки уточняется)" }}</p><p class="form-hint">{{ item.availability.status === 'sold_out' ? 'Мест нет' : item.availability.status === 'available' ? 'Места доступны' : 'Свободные места уточняются' }}</p></div>
+      <div class="flex flex-wrap items-start justify-between gap-4"><div><span class="badge">Рейс № {{ item.trip_id }}</span><span v-if="item.is_demo" class="badge ml-2">Демонстрационный рейс</span><p class="mt-3 text-lg font-semibold">{{ item.boarding_name }} → {{ item.alighting_name }}</p><p class="mt-2 text-sm">{{ routeDate(item.departure_time, item.timezone).split('-').reverse().join('.') }} · {{ routeTime(item.departure_time, item.timezone) }} → {{ routeTime(item.arrival_time, item.arrival_timezone) }}</p><p class="form-hint">Отправление: {{ item.timezone }} · Прибытие: {{ item.arrival_timezone || "UTC (пояс остановки уточняется)" }}</p><p class="form-hint">{{ item.availability.status === 'sold_out' ? 'Мест нет' : item.availability.status === 'available' ? 'Места доступны' : 'Свободные места уточняются' }}</p></div>
       <div class="flex flex-col items-end gap-3"><strong class="text-2xl">{{ item.price ? minorPrice(item.price.amount_minor) : "Тариф уточняется" }}</strong><NuxtLink :to="{path:`/trips/${item.trip_id}`,query:{boarding_stop_id:item.boarding_stop_id,alighting_stop_id:item.alighting_stop_id}}" class="btn btn-primary">Подробнее <ArrowUpRight :size="15" /></NuxtLink></div></div>
     </article>
   </div>
