@@ -12,8 +12,6 @@ import { routeDate, routeTime } from "~/utils/route-display";
 import type { Stop } from "~/types/domain/transport";
 import { apiErrorMessage } from "~/utils/api-errors";
 import {
-  displayDate,
-  displayTime,
   displayPrice,
   displayDuration,
   tripStatusLabels,
@@ -74,6 +72,7 @@ const errorMessage = computed(() =>
         }}</span>
       </div>
       <TransportSegmentQuote v-if="hasSegment" :trip-id="id" :boarding="boarding" :alighting="alighting" />
+      <BookingHoldPanel v-if="hasSegment" :key="`${id}-${boarding}-${alighting}`" :trip-id="id" :boarding="boarding" :alighting="alighting" />
       <div class="detail-grid">
         <section class="panel card-pad">
           <div class="section-head">
@@ -132,8 +131,7 @@ const errorMessage = computed(() =>
             </p>
             <div class="price-divider"></div>
             <p class="booking-note">
-              Онлайн-бронирование пока недоступно. Вы можете ознакомиться с
-              расписанием и транспортом.
+              Чтобы проверить места и удержать место на участке, выберите отправление и остановки в поиске рейсов.
             </p>
             <NuxtLink to="/trips" class="btn btn-secondary all-trips"
               >Другие рейсы <ArrowUpRight :size="14"
@@ -170,13 +168,13 @@ const errorMessage = computed(() =>
               <dt>Отправление</dt>
               <dd>
                 {{ stopDate(trip.start_time, sortedStops[0]?.stop) }},
-                {{ displayTime(trip.start_time) }}
+                {{ stopTime(trip.start_time, sortedStops[0]?.stop) }} ({{ sortedStops[0]?.stop.effective_timezone || "UTC" }})
               </dd>
               <dt>Прибытие</dt>
               <dd>
                 {{
                   trip.end_time
-                    ? `${displayDate(trip.end_time)}, ${displayTime(trip.end_time)}`
+                    ? `${stopDate(trip.end_time, sortedStops[sortedStops.length - 1]?.stop)}, ${stopTime(trip.end_time, sortedStops[sortedStops.length - 1]?.stop)} (${sortedStops[sortedStops.length - 1]?.stop.effective_timezone || "UTC"})`
                     : "Не указано"
                 }}
               </dd>

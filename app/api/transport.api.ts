@@ -22,6 +22,7 @@ import type {
 } from "../types/domain/transport";
 
 export interface ApiRequestOptions {
+  headers?: Record<string, string>;
   signal?: AbortSignal;
   method?: "GET" | "POST" | "PUT" | "DELETE";
   retry?: number;
