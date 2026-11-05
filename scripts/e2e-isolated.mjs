@@ -33,6 +33,7 @@ function pilotStyle(key) {
     throw new Error(`${key} must point to a local pilot style`);
   return url.toString();
 }
+const checkoutEnabled = process.env.CORPORD_E2E_CHECKOUT_ENABLED === "1";
 const mapStyle = pilotStyle("CORPORD_E2E_MAP_STYLE_URL");
 const mapDarkStyle = pilotStyle("CORPORD_E2E_MAP_DARK_STYLE_URL");
 const containers = [];
@@ -227,6 +228,8 @@ try {
   );
   // Only this disposable database receives a synthetic bookable trip. Public
   // CRUD intentionally cannot turn arbitrary real trips into demo inventory.
+  if (checkoutEnabled && !(await fetch(`http://127.0.0.1:${apiPort}/__test/checkout/status`)).ok)
+    throw new Error("Checkout E2E requires the build-tagged disposable test backend image");
   const bookingFixture = JSON.parse(execFileSync("docker", [
     "exec", "-i", `${prefix}-postgres`, "psql", "-U", "postgres", "-d", "corpord_e2e", "-qAt", "-v", "ON_ERROR_STOP=1",
   ], { input: readFileSync(new URL('../tests/fixtures/booking.sql',import.meta.url)), stdio:["pipe","pipe","pipe"] }).toString().trim());
@@ -304,6 +307,7 @@ try {
         CORPORD_E2E_ADMIN_EMAIL: email,
         CORPORD_E2E_ADMIN_PASSWORD: password,
         CORPORD_E2E_BOOKING_FIXTURE: JSON.stringify(bookingFixture),
+        CORPORD_E2E_CHECKOUT_FIXTURE: checkoutEnabled ? JSON.stringify(bookingFixture) : "",
         PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: executable,
       },
     },

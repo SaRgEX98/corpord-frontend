@@ -22,7 +22,7 @@ test('passenger CRUD, login return, idempotent lost-response retry, expiry and c
   await page.locator('input[type=email]').fill(process.env.CORPORD_E2E_ADMIN_EMAIL!);
   await page.locator('input[type=password]').fill(process.env.CORPORD_E2E_ADMIN_PASSWORD!);
   await page.getByRole('button', { name: 'Войти в аккаунт', exact: true }).click();
-  await expect(page).toHaveURL(new RegExp(`/trips/${fixture!.trip_id}\\?boarding_stop_id=`));
+  await expect(page).toHaveURL(new URL(segment, page.url()).href);
   const login = await request.post(`${api}/auth/login`, { data: { email: process.env.CORPORD_E2E_ADMIN_EMAIL, password: process.env.CORPORD_E2E_ADMIN_PASSWORD } });
   expect(login.ok()).toBeTruthy();
   const headers = { Authorization: `Bearer ${(await login.json()).access_token}` };

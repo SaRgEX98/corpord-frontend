@@ -3,7 +3,9 @@ import { ArrowRight, Eye, EyeOff } from "lucide-vue-next";
 import { LoginSchema } from "~/features/auth/ui/login.schema";
 import { useAuthStore } from "~/store/auth";
 import { apiErrorMessage } from "~/utils/api-errors";
+import { safeLoginRedirect } from "~/utils/login-redirect";
 const auth = useAuthStore();
+const route = useRoute();
 const form = reactive({ email: "", password: "" });
 const loading = ref(false);
 const visible = ref(false);
@@ -16,10 +18,11 @@ async function onSubmit() {
     error.value = result.error.issues[0]?.message || "Проверьте данные";
     return;
   }
+  const destination = safeLoginRedirect(route.query.redirect);
   loading.value = true;
   try {
     await auth.login(result.data);
-    await navigateTo("/me/profile");
+    await navigateTo(destination);
   } catch (cause) {
     error.value = apiErrorMessage(cause);
   } finally {
