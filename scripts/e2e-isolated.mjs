@@ -1,6 +1,6 @@
 // An entirely disposable stack. Never reads workspace .env or existing database credentials.
 import { execFileSync, spawn } from "node:child_process";
-import { mkdtempSync, writeFileSync, rmSync, existsSync } from "node:fs";
+import { mkdtempSync, writeFileSync, rmSync, existsSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomBytes } from "node:crypto";
@@ -225,6 +225,11 @@ try {
       stdio: ["pipe", "pipe", "pipe"],
     },
   );
+  // Only this disposable database receives a synthetic bookable trip. Public
+  // CRUD intentionally cannot turn arbitrary real trips into demo inventory.
+  const bookingFixture = JSON.parse(execFileSync("docker", [
+    "exec", "-i", `${prefix}-postgres`, "psql", "-U", "postgres", "-d", "corpord_e2e", "-qAt", "-v", "ON_ERROR_STOP=1",
+  ], { input: readFileSync(new URL('../tests/fixtures/booking.sql',import.meta.url)), stdio:["pipe","pipe","pipe"] }).toString().trim());
   if (interrupted) throw new Error("Test interrupted");
   const adminLogin = await fetch(`${api}/auth/login`, {
     method: "POST",
@@ -298,6 +303,7 @@ try {
         CORPORD_E2E_API_URL: api,
         CORPORD_E2E_ADMIN_EMAIL: email,
         CORPORD_E2E_ADMIN_PASSWORD: password,
+        CORPORD_E2E_BOOKING_FIXTURE: JSON.stringify(bookingFixture),
         PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: executable,
       },
     },

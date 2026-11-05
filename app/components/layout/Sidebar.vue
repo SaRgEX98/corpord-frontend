@@ -46,7 +46,7 @@ const links = [
         class="nav-link"
         :class="{ active: $route.path === '/me/profile' }"
         ><CircleUserRound :size="18" /><span>Личный кабинет</span></NuxtLink
-      ><NuxtLink
+      ><NuxtLink v-if="auth.isAuthenticated" to="/me/orders" class="nav-link" :class="{ active: $route.path === '/me/orders' }"><Route :size="18" /><span>Мои поездки</span></NuxtLink><NuxtLink v-if="auth.isAuthenticated" to="/me/passengers" class="nav-link" :class="{ active: $route.path === '/me/passengers' }"><UsersRound :size="18" /><span>Пассажиры</span></NuxtLink><NuxtLink
         v-if="auth.isAuthenticated"
         to="/me/settings"
         class="nav-link"
@@ -88,6 +88,7 @@ const links = [
   position: sticky;
   top: 0;
   height: 100dvh;
+  overflow-y: auto;
 }
 .sidebar-brand {
   padding: 0 10px 42px;
