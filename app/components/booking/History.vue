@@ -3,8 +3,6 @@ import { createBookingApi } from '~/api/booking.api';
 import { useAuthStore } from '~/store/auth';
 import { bookingError } from '~/utils/booking';
 import type { Booking } from '~/types/domain/booking';
-definePageMeta({ layout: 'me' });
-useHead({ title: 'Мои поездки' });
 const auth = useAuthStore();
 const api = createBookingApi(useNuxtApp().$api);
 const { items, nextCursor, pending, error, refresh, loadMore } = usePrivatePages<Booking>(api.bookings);
@@ -26,8 +24,7 @@ async function update(id: number, cancel = false) {
 }
 </script>
 <template>
-  <div class="container-page">
-    <div class="page-heading"><div><p class="page-eyebrow">ЛИЧНОЕ ПРОСТРАНСТВО</p><h1 class="page-title">Мои поездки</h1><p class="page-description">История удержаний мест. Оплата пока не подключена, удержание не является билетом.</p></div><NuxtLink to="/trips" class="btn btn-primary">Выбрать рейс</NuxtLink></div>
+  <div>
     <p v-if="mutationError" class="form-error mb-4" role="alert">{{ mutationError }}</p>
     <section aria-label="История удержаний" :aria-busy="pending" class="grid gap-4">
       <BookingCard v-for="booking in items" :key="booking.id" :booking="booking" :now="now" :pending="mutation !== null" @cancel="update(booking.id, true)" @refresh="update(booking.id)" />

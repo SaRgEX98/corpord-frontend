@@ -16,7 +16,9 @@ export interface Booking {
   timezone: string;
   arrival_timezone: string | null;
   passenger_name: string;
-  status: 'held' | 'cancelled' | 'expired';
+  status: 'held' | 'cancelled' | 'expired' | 'payment_committing' | 'confirmed';
+  checkout_id: number | null;
+  checkout_enabled: boolean;
   seat_number: number;
   amount_minor: number;
   currency: 'RUB';

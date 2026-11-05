@@ -96,7 +96,7 @@ onBeforeUnmount(() => { clearPrivate(); stockGeneration++; stockController?.abor
 <template>
   <section class="panel card-pad mb-5" aria-label="Удержание места">
     <h2 class="section-label">Удержать место на 10 минут</h2>
-    <p class="form-hint mt-3">Один пассажир на выбранном участке. Оплата пока не подключена.</p>
+    <p class="form-hint mt-3">Один пассажир на выбранном участке. Доступность тестовой оплаты проверяется после удержания.</p>
     <p v-if="stockPending" role="status" class="form-hint mt-3">Проверяем свободные места…</p>
     <p v-if="stockError" class="form-error mt-3" role="alert">{{ stockError }} <button class="text-link" @click="availability">Повторить проверку</button></p>
     <template v-if="stock"><p v-if="stock.is_demo" class="badge mt-3">Демонстрационное удержание · тестовая цена</p><p v-if="stock.status === 'unknown'" class="form-hint mt-3">Перевозчик не предоставил остатки мест. Онлайн-удержание пока недоступно.</p><p v-else-if="stock.status === 'sold_out'" class="form-hint mt-3">На этом участке свободных мест нет.</p><p v-else class="form-hint mt-3">Свободных мест на участке: {{ stock.seats }}. Доступность перепроверяется при удержании.</p></template>

@@ -10,7 +10,7 @@ BEGIN
  INSERT INTO bus_statuses(name) VALUES('Booking E2E ready') RETURNING id INTO bus_status_id;
  INSERT INTO driver_status(name) VALUES('Booking E2E driver') RETURNING id INTO driver_status_id;
  INSERT INTO bus(license_plate,brand,capacity,category_id,status_id)
- VALUES('BOOK-E2E','Booking E2E',2,category_id,bus_status_id) RETURNING id INTO bus_id;
+ VALUES('BOOK-E2E','Booking E2E',8,category_id,bus_status_id) RETURNING id INTO bus_id;
  INSERT INTO drivers(first_name,last_name,middle_name,phone_number,status)
  VALUES('Тест','Бронирования','','DEMO-NO-PHONE',driver_status_id) RETURNING id INTO driver_id;
  SELECT id INTO STRICT city_id FROM route_cities WHERE name='Екатеринбург' ORDER BY id LIMIT 1;
@@ -23,7 +23,7 @@ BEGIN
  INSERT INTO trip_stops(trip_id,stop_id,arrival_time,departure_time,stop_order,price_to_next)
  VALUES(trip_id,first_stop,departure,departure,1,150.01),
        (trip_id,last_stop,departure+interval '1 hour',departure+interval '1 hour',2,0);
- INSERT INTO booking_e2e_fixture VALUES(trip_id,first_stop,last_stop,to_char(departure,'YYYY-MM-DD'),'Asia/Yekaterinburg',2);
+ INSERT INTO booking_e2e_fixture VALUES(trip_id,first_stop,last_stop,to_char(departure,'YYYY-MM-DD'),'Asia/Yekaterinburg',8);
 END $$;
 SELECT row_to_json(fixture) FROM booking_e2e_fixture fixture;
 COMMIT;
